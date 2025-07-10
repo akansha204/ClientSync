@@ -116,7 +116,7 @@ export default function SidebarNav({ activeTab, setActiveTab, children }: Sideba
                     <div className="flex h-full flex-col">
                         <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
                             <SidebarTrigger />
-                            <h1 className="text-lg font-semibold">Host Dashboard</h1>
+                            <h1 className="text-lg font-semibold">User Dashboard</h1>
                         </header>
                         <div className="flex-1 overflow-auto p-4">
                             {children}
