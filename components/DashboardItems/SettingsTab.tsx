@@ -1,16 +1,17 @@
-"use client"
+'use client'
+
 import React, { useState, useEffect } from 'react'
-import { Save, User, Bell, Shield, Database, Eye, EyeOff, Upload, Camera } from 'lucide-react'
+import { Save, User, Shield, Database, Eye, EyeOff, Camera } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Separator } from '@/components/ui/separator'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { StatsCard } from '@/components/ui/stats-card'
 import useSupabaseSession from '@/hooks/useSupabaseSession'
 import { DashboardService } from '@/lib/dashboardService'
 
@@ -26,18 +27,11 @@ interface UserProfile {
     updated_at: string;
 }
 
-interface UserPreferences {
-    id: string;
-    user_id: string;
-    email_notifications: boolean;
-    task_reminders: boolean;
-    weekly_digest: boolean;
-    theme: 'light' | 'dark' | 'system';
-    timezone: string;
-    date_format: string;
-    time_format: '12h' | '24h';
-    created_at: string;
-    updated_at: string;
+interface AccountStats {
+    totalClients: number;
+    activeClients: number;
+    activeTasks: number;
+    completedTasks: number;
 }
 
 export default function SettingsTab() {
@@ -46,6 +40,8 @@ export default function SettingsTab() {
     const [saving, setSaving] = useState(false)
     const [showPassword, setShowPassword] = useState(false)
     const [isDeleteAccountOpen, setIsDeleteAccountOpen] = useState(false)
+    const [isClearTasksOpen, setIsClearTasksOpen] = useState(false)
+    const [isCleanupClientsOpen, setIsCleanupClientsOpen] = useState(false)
 
     // Profile state
     const [profile, setProfile] = useState<UserProfile>({
@@ -60,271 +56,229 @@ export default function SettingsTab() {
         updated_at: ''
     })
 
-    // Preferences state
-    const [preferences, setPreferences] = useState<UserPreferences>({
-        id: '',
-        user_id: '',
-        email_notifications: true,
-        task_reminders: true,
-        weekly_digest: false,
-        theme: 'light',
-        timezone: 'UTC',
-        date_format: 'MM/DD/YYYY',
-        time_format: '12h',
-        created_at: '',
-        updated_at: ''
-    })
-
-    // Password change state
-    const [passwordData, setPasswordData] = useState({
+    // Password state
+    const [passwords, setPasswords] = useState({
         currentPassword: '',
         newPassword: '',
         confirmPassword: ''
     })
 
-    // Messages state
-    const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+    // Account stats state
+    const [accountStats, setAccountStats] = useState<AccountStats>({
+        totalClients: 0,
+        activeClients: 0,
+        activeTasks: 0,
+        completedTasks: 0
+    })
 
     useEffect(() => {
-        if (session?.user) {
-            loadUserData()
+        if (session?.user?.id) {
+            loadUserProfile()
+            loadAccountStats()
         }
     }, [session])
 
-    const loadUserData = async () => {
+    const loadUserProfile = async () => {
         try {
-            setLoading(true)
-            const userId = session?.user?.id
-            const userEmail = session?.user?.email
-
-            if (userId && userEmail) {
-                // Set basic profile data from session
-                setProfile(prev => ({
-                    ...prev,
-                    id: userId,
-                    email: userEmail,
-                    full_name: session?.user?.user_metadata?.full_name || '',
-                    created_at: session?.user?.created_at || ''
-                }))
-
-                // Load additional profile data if it exists in a profiles table
-                // For now, we'll use demo data
-                setProfile(prev => ({
-                    ...prev,
-                    company: 'Your Company Inc.',
-                    phone: '+1 (555) 123-4567',
-                    bio: 'Professional client relationship manager',
-                    updated_at: new Date().toISOString()
-                }))
-
-                // Load preferences (demo data)
-                setPreferences(prev => ({
-                    ...prev,
-                    id: 'pref-' + userId,
-                    user_id: userId,
-                    created_at: new Date().toISOString(),
-                    updated_at: new Date().toISOString()
-                }))
+            const profileData = await DashboardService.getUserProfile(session!.user.id)
+            if (profileData) {
+                setProfile(profileData)
             }
         } catch (error) {
-            console.error('Error loading user data:', error)
-            showMessage('error', 'Failed to load user data')
+            console.error('Error loading profile:', error)
         } finally {
             setLoading(false)
         }
     }
 
-    const showMessage = (type: 'success' | 'error', text: string) => {
-        setMessage({ type, text })
-        setTimeout(() => setMessage(null), 5000)
+    const loadAccountStats = async () => {
+        try {
+            const [clients, tasks] = await Promise.all([
+                DashboardService.getAllClients(session!.user.id),
+                DashboardService.getAllTasks(session!.user.id)
+            ])
+
+            const activeClients = clients.filter((c: any) => c.status === 'active')
+            const activeTasks = tasks.filter((t: any) => !t.is_completed)
+            const completedTasks = tasks.filter((t: any) => t.is_completed)
+
+            setAccountStats({
+                totalClients: clients.length,
+                activeClients: activeClients.length,
+                activeTasks: activeTasks.length,
+                completedTasks: completedTasks.length
+            })
+        } catch (error) {
+            console.error('Error loading account stats:', error)
+        }
     }
 
     const handleProfileUpdate = async () => {
+        if (!session?.user?.id) return
+
+        setSaving(true)
         try {
-            setSaving(true)
-            // In a real implementation, you would update the profiles table in Supabase
-            // For now, we'll simulate the update
-            await new Promise(resolve => setTimeout(resolve, 1000))
-
-            setProfile(prev => ({
-                ...prev,
-                updated_at: new Date().toISOString()
-            }))
-
-            showMessage('success', 'Profile updated successfully!')
+            await DashboardService.updateUserProfile(session.user.id, {
+                full_name: profile.full_name,
+                company: profile.company,
+                phone: profile.phone,
+                bio: profile.bio,
+                avatar_url: profile.avatar_url
+            })
+            console.log('Profile updated successfully')
         } catch (error) {
             console.error('Error updating profile:', error)
-            showMessage('error', 'Failed to update profile')
         } finally {
             setSaving(false)
         }
     }
 
-    const handlePreferencesUpdate = async () => {
-        try {
-            setSaving(true)
-            // In a real implementation, you would update the user_preferences table
-            await new Promise(resolve => setTimeout(resolve, 1000))
+    const handlePasswordUpdate = async () => {
+        if (!session?.user?.id) return
 
-            setPreferences(prev => ({
-                ...prev,
-                updated_at: new Date().toISOString()
-            }))
-
-            showMessage('success', 'Preferences updated successfully!')
-        } catch (error) {
-            console.error('Error updating preferences:', error)
-            showMessage('error', 'Failed to update preferences')
-        } finally {
-            setSaving(false)
-        }
-    }
-
-    const handlePasswordChange = async () => {
-        if (passwordData.newPassword !== passwordData.confirmPassword) {
-            showMessage('error', 'New passwords do not match')
+        if (passwords.newPassword !== passwords.confirmPassword) {
+            console.error('Passwords do not match')
             return
         }
 
-        if (passwordData.newPassword.length < 6) {
-            showMessage('error', 'Password must be at least 6 characters')
-            return
-        }
-
+        setSaving(true)
         try {
-            setSaving(true)
-            // In a real implementation, you would use Supabase auth to update password
-            await new Promise(resolve => setTimeout(resolve, 1000))
-
-            setPasswordData({
+            await DashboardService.updatePassword(session.user.id, passwords.newPassword)
+            setPasswords({
                 currentPassword: '',
                 newPassword: '',
                 confirmPassword: ''
             })
-
-            showMessage('success', 'Password updated successfully!')
+            console.log('Password updated successfully')
         } catch (error) {
             console.error('Error updating password:', error)
-            showMessage('error', 'Failed to update password')
         } finally {
             setSaving(false)
         }
     }
 
-    const getInitials = (name: string) => {
-        return name.split(' ').map(n => n[0]).join('').toUpperCase()
+    const handleDeleteAccount = async () => {
+        if (!session?.user?.id) return
+
+        try {
+            await DashboardService.deleteUserAccount(session.user.id)
+            console.log('Account deleted successfully')
+            // The user will be redirected by the auth state change
+        } catch (error) {
+            console.error('Error deleting account:', error)
+        }
+        setIsDeleteAccountOpen(false)
+    }
+
+    const handleClearCompletedTasks = async () => {
+        if (!session?.user?.id) return
+
+        try {
+            await DashboardService.clearCompletedTasks(session.user.id)
+            await loadAccountStats() // Refresh stats
+            console.log('Completed tasks cleared successfully')
+        } catch (error) {
+            console.error('Error clearing completed tasks:', error)
+        }
+        setIsClearTasksOpen(false)
+    }
+
+    const handleCleanupInactiveClients = async () => {
+        if (!session?.user?.id) return
+
+        try {
+            await DashboardService.cleanupInactiveClients(session.user.id)
+            await loadAccountStats() // Refresh stats
+            console.log('Inactive clients cleaned up successfully')
+        } catch (error) {
+            console.error('Error cleaning up inactive clients:', error)
+        }
+        setIsCleanupClientsOpen(false)
     }
 
     if (loading) {
-        return (
-            <div className="flex items-center justify-center py-8">
-                <div className="text-muted-foreground">Loading settings...</div>
-            </div>
-        )
+        return <div>Loading...</div>
     }
 
     return (
-        <div className="space-y-6 p-6">
-            {/* Header */}
+        <div className="space-y-6">
             <div>
-                <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
+                <h1 className="text-3xl font-bold">Settings</h1>
                 <p className="text-muted-foreground">
                     Manage your account settings and preferences.
                 </p>
             </div>
 
-            {/* Message */}
-            {message && (
-                <div className={`p-4 rounded-md ${message.type === 'success'
-                        ? 'bg-green-50 text-green-800 border border-green-200'
-                        : 'bg-red-50 text-red-800 border border-red-200'
-                    }`}>
-                    {message.text}
-                </div>
-            )}
-
-            <Tabs defaultValue="profile" className="space-y-6">
-                <TabsList className="grid w-full grid-cols-4">
-                    <TabsTrigger value="profile">Profile</TabsTrigger>
-                    <TabsTrigger value="preferences">Preferences</TabsTrigger>
+            <Tabs defaultValue="account" className="w-full">
+                <TabsList className="grid w-full grid-cols-3">
+                    <TabsTrigger value="account">Account</TabsTrigger>
                     <TabsTrigger value="security">Security</TabsTrigger>
                     <TabsTrigger value="data">Data</TabsTrigger>
                 </TabsList>
 
-                {/* Profile Tab */}
-                <TabsContent value="profile" className="space-y-6">
+                <TabsContent value="account" className="space-y-6">
                     <Card>
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
-                                <User className="h-5 w-5" />
+                                <User className="w-5 h-5" />
                                 Profile Information
                             </CardTitle>
                             <CardDescription>
-                                Update your personal information and how others see you.
+                                Update your account details and personal information.
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-6">
-                            {/* Avatar Section */}
-                            <div className="flex items-center space-x-4">
-                                <Avatar className="h-20 w-20">
+                            <div className="flex items-center gap-4">
+                                <Avatar className="w-20 h-20">
                                     <AvatarImage src={profile.avatar_url} />
-                                    <AvatarFallback className="text-lg">
-                                        {getInitials(profile.full_name || profile.email)}
+                                    <AvatarFallback>
+                                        {profile.full_name?.split(' ').map(n => n[0]).join('') || 'U'}
                                     </AvatarFallback>
                                 </Avatar>
-                                <div className="space-y-2">
-                                    <Button variant="outline" size="sm">
-                                        <Camera className="h-4 w-4 mr-2" />
-                                        Change Avatar
-                                    </Button>
-                                    <p className="text-sm text-muted-foreground">
-                                        Upload a new profile picture
-                                    </p>
-                                </div>
+                                <Button variant="outline" size="sm" className="gap-2">
+                                    <Camera className="w-4 h-4" />
+                                    Change Photo
+                                </Button>
                             </div>
 
-                            <Separator />
-
-                            {/* Profile Form */}
-                            <div className="grid gap-6 md:grid-cols-2">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                     <Label htmlFor="full_name">Full Name</Label>
                                     <Input
                                         id="full_name"
-                                        value={profile.full_name}
+                                        value={profile.full_name || ''}
                                         onChange={(e) => setProfile({ ...profile, full_name: e.target.value })}
                                         placeholder="Enter your full name"
                                     />
                                 </div>
+
                                 <div className="space-y-2">
                                     <Label htmlFor="email">Email</Label>
                                     <Input
                                         id="email"
-                                        type="email"
                                         value={profile.email}
                                         disabled
                                         className="bg-muted"
                                     />
-                                    <p className="text-xs text-muted-foreground">
-                                        Email cannot be changed here. Contact support if needed.
-                                    </p>
                                 </div>
+
                                 <div className="space-y-2">
                                     <Label htmlFor="company">Company</Label>
                                     <Input
                                         id="company"
-                                        value={profile.company}
+                                        value={profile.company || ''}
                                         onChange={(e) => setProfile({ ...profile, company: e.target.value })}
                                         placeholder="Your company name"
                                     />
                                 </div>
+
                                 <div className="space-y-2">
                                     <Label htmlFor="phone">Phone</Label>
                                     <Input
                                         id="phone"
-                                        value={profile.phone}
+                                        value={profile.phone || ''}
                                         onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
-                                        placeholder="+1 (555) 123-4567"
+                                        placeholder="Your phone number"
                                     />
                                 </div>
                             </div>
@@ -333,168 +287,30 @@ export default function SettingsTab() {
                                 <Label htmlFor="bio">Bio</Label>
                                 <Textarea
                                     id="bio"
-                                    value={profile.bio}
+                                    value={profile.bio || ''}
                                     onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
-                                    placeholder="Tell us about yourself..."
+                                    placeholder="Tell us about yourself"
                                     rows={3}
                                 />
                             </div>
 
-                            <div className="flex justify-end">
-                                <Button onClick={handleProfileUpdate} disabled={saving}>
-                                    {saving ? 'Saving...' : (
-                                        <>
-                                            <Save className="h-4 w-4 mr-2" />
-                                            Save Changes
-                                        </>
-                                    )}
-                                </Button>
-                            </div>
+                            <Button onClick={handleProfileUpdate} disabled={saving} className="gap-2">
+                                <Save className="w-4 h-4" />
+                                {saving ? 'Saving...' : 'Save Changes'}
+                            </Button>
                         </CardContent>
                     </Card>
                 </TabsContent>
 
-                {/* Preferences Tab */}
-                <TabsContent value="preferences" className="space-y-6">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                <Bell className="h-5 w-5" />
-                                Notifications
-                            </CardTitle>
-                            <CardDescription>
-                                Configure how you receive notifications.
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="font-medium">Email Notifications</p>
-                                    <p className="text-sm text-muted-foreground">
-                                        Receive updates about your clients and tasks via email
-                                    </p>
-                                </div>
-                                <Button
-                                    variant={preferences.email_notifications ? "default" : "outline"}
-                                    size="sm"
-                                    onClick={() => setPreferences({
-                                        ...preferences,
-                                        email_notifications: !preferences.email_notifications
-                                    })}
-                                >
-                                    {preferences.email_notifications ? 'Enabled' : 'Disabled'}
-                                </Button>
-                            </div>
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="font-medium">Task Reminders</p>
-                                    <p className="text-sm text-muted-foreground">
-                                        Get reminded about upcoming task deadlines
-                                    </p>
-                                </div>
-                                <Button
-                                    variant={preferences.task_reminders ? "default" : "outline"}
-                                    size="sm"
-                                    onClick={() => setPreferences({
-                                        ...preferences,
-                                        task_reminders: !preferences.task_reminders
-                                    })}
-                                >
-                                    {preferences.task_reminders ? 'Enabled' : 'Disabled'}
-                                </Button>
-                            </div>
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="font-medium">Weekly Digest</p>
-                                    <p className="text-sm text-muted-foreground">
-                                        Receive a weekly summary of your activities
-                                    </p>
-                                </div>
-                                <Button
-                                    variant={preferences.weekly_digest ? "default" : "outline"}
-                                    size="sm"
-                                    onClick={() => setPreferences({
-                                        ...preferences,
-                                        weekly_digest: !preferences.weekly_digest
-                                    })}
-                                >
-                                    {preferences.weekly_digest ? 'Enabled' : 'Disabled'}
-                                </Button>
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Display Preferences</CardTitle>
-                            <CardDescription>
-                                Customize how dates and times are displayed.
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="grid gap-4 md:grid-cols-2">
-                                <div className="space-y-2">
-                                    <Label htmlFor="timezone">Timezone</Label>
-                                    <Input
-                                        id="timezone"
-                                        value={preferences.timezone}
-                                        onChange={(e) => setPreferences({ ...preferences, timezone: e.target.value })}
-                                        placeholder="UTC"
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="date_format">Date Format</Label>
-                                    <Input
-                                        id="date_format"
-                                        value={preferences.date_format}
-                                        onChange={(e) => setPreferences({ ...preferences, date_format: e.target.value })}
-                                        placeholder="MM/DD/YYYY"
-                                    />
-                                </div>
-                            </div>
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="font-medium">Time Format</p>
-                                    <p className="text-sm text-muted-foreground">
-                                        Choose between 12-hour and 24-hour time format
-                                    </p>
-                                </div>
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => setPreferences({
-                                        ...preferences,
-                                        time_format: preferences.time_format === '12h' ? '24h' : '12h'
-                                    })}
-                                >
-                                    {preferences.time_format === '12h' ? '12 Hour' : '24 Hour'}
-                                </Button>
-                            </div>
-
-                            <div className="flex justify-end">
-                                <Button onClick={handlePreferencesUpdate} disabled={saving}>
-                                    {saving ? 'Saving...' : (
-                                        <>
-                                            <Save className="h-4 w-4 mr-2" />
-                                            Save Preferences
-                                        </>
-                                    )}
-                                </Button>
-                            </div>
-                        </CardContent>
-                    </Card>
-                </TabsContent>
-
-                {/* Security Tab */}
                 <TabsContent value="security" className="space-y-6">
                     <Card>
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
-                                <Shield className="h-5 w-5" />
-                                Change Password
+                                <Shield className="w-5 h-5" />
+                                Password & Security
                             </CardTitle>
                             <CardDescription>
-                                Update your password to keep your account secure.
+                                Update your password and manage security settings.
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
@@ -504,11 +320,8 @@ export default function SettingsTab() {
                                     <Input
                                         id="current_password"
                                         type={showPassword ? "text" : "password"}
-                                        value={passwordData.currentPassword}
-                                        onChange={(e) => setPasswordData({
-                                            ...passwordData,
-                                            currentPassword: e.target.value
-                                        })}
+                                        value={passwords.currentPassword}
+                                        onChange={(e) => setPasswords({ ...passwords, currentPassword: e.target.value })}
                                         placeholder="Enter current password"
                                     />
                                     <Button
@@ -526,155 +339,210 @@ export default function SettingsTab() {
                                     </Button>
                                 </div>
                             </div>
+
                             <div className="space-y-2">
                                 <Label htmlFor="new_password">New Password</Label>
                                 <Input
                                     id="new_password"
-                                    type="password"
-                                    value={passwordData.newPassword}
-                                    onChange={(e) => setPasswordData({
-                                        ...passwordData,
-                                        newPassword: e.target.value
-                                    })}
+                                    type={showPassword ? "text" : "password"}
+                                    value={passwords.newPassword}
+                                    onChange={(e) => setPasswords({ ...passwords, newPassword: e.target.value })}
                                     placeholder="Enter new password"
                                 />
                             </div>
+
                             <div className="space-y-2">
                                 <Label htmlFor="confirm_password">Confirm New Password</Label>
                                 <Input
                                     id="confirm_password"
-                                    type="password"
-                                    value={passwordData.confirmPassword}
-                                    onChange={(e) => setPasswordData({
-                                        ...passwordData,
-                                        confirmPassword: e.target.value
-                                    })}
+                                    type={showPassword ? "text" : "password"}
+                                    value={passwords.confirmPassword}
+                                    onChange={(e) => setPasswords({ ...passwords, confirmPassword: e.target.value })}
                                     placeholder="Confirm new password"
                                 />
                             </div>
-                            <div className="flex justify-end">
-                                <Button onClick={handlePasswordChange} disabled={saving}>
-                                    {saving ? 'Updating...' : 'Update Password'}
-                                </Button>
-                            </div>
+
+                            <Button onClick={handlePasswordUpdate} disabled={saving} className="gap-2">
+                                <Save className="w-4 h-4" />
+                                {saving ? 'Updating...' : 'Update Password'}
+                            </Button>
                         </CardContent>
                     </Card>
 
-                    <Card>
+                    <Card className="border-red-200">
                         <CardHeader>
-                            <CardTitle className="text-red-600">Danger Zone</CardTitle>
+                            <CardTitle className="text-red-600 flex items-center gap-2">
+                                <Shield className="w-5 h-5" />
+                                Danger Zone
+                            </CardTitle>
                             <CardDescription>
                                 Irreversible and destructive actions.
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <div className="flex items-center justify-between p-4 border border-red-200 rounded-md bg-red-50">
-                                <div>
-                                    <p className="font-medium text-red-800">Delete Account</p>
-                                    <p className="text-sm text-red-600">
-                                        Permanently delete your account and all data
-                                    </p>
+                            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                                <div className="flex items-start justify-between">
+                                    <div className="flex-1">
+                                        <h4 className="font-medium text-red-800 mb-1">Delete Account</h4>
+                                        <p className="text-sm text-red-600 mb-3">
+                                            Permanently delete your account and all associated data including clients, tasks, and settings.
+                                            This action cannot be undone.
+                                        </p>
+                                        <Dialog open={isDeleteAccountOpen} onOpenChange={setIsDeleteAccountOpen}>
+                                            <DialogTrigger asChild>
+                                                <Button variant="destructive" size="sm">
+                                                    Delete Account
+                                                </Button>
+                                            </DialogTrigger>
+                                            <DialogContent className="sm:max-w-md">
+                                                <DialogHeader>
+                                                    <DialogTitle className="text-red-600">Delete Account</DialogTitle>
+                                                    <DialogDescription className="text-gray-600">
+                                                        Are you absolutely sure you want to delete your account? This will:
+                                                    </DialogDescription>
+                                                </DialogHeader>
+                                                <div className="py-4">
+                                                    <ul className="space-y-2 text-sm text-gray-600">
+                                                        <li className="flex items-center gap-2">
+                                                            <div className="w-1 h-1 bg-red-500 rounded-full"></div>
+                                                            Permanently delete all your clients
+                                                        </li>
+                                                        <li className="flex items-center gap-2">
+                                                            <div className="w-1 h-1 bg-red-500 rounded-full"></div>
+                                                            Remove all tasks and follow-ups
+                                                        </li>
+                                                        <li className="flex items-center gap-2">
+                                                            <div className="w-1 h-1 bg-red-500 rounded-full"></div>
+                                                            Erase your profile and settings
+                                                        </li>
+                                                        <li className="flex items-center gap-2">
+                                                            <div className="w-1 h-1 bg-red-500 rounded-full"></div>
+                                                            Cancel your account permanently
+                                                        </li>
+                                                    </ul>
+                                                    <div className="mt-4 p-3 bg-red-50 rounded-md border border-red-200">
+                                                        <p className="text-sm font-medium text-red-800">
+                                                            This action cannot be undone!
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <div className="flex justify-end gap-2">
+                                                    <Button variant="outline" onClick={() => setIsDeleteAccountOpen(false)}>
+                                                        Cancel
+                                                    </Button>
+                                                    <Button variant="destructive" onClick={handleDeleteAccount}>
+                                                        Yes, Delete My Account
+                                                    </Button>
+                                                </div>
+                                            </DialogContent>
+                                        </Dialog>
+                                    </div>
                                 </div>
-                                <Dialog open={isDeleteAccountOpen} onOpenChange={setIsDeleteAccountOpen}>
-                                    <DialogTrigger asChild>
-                                        <Button variant="destructive" size="sm">
-                                            Delete Account
-                                        </Button>
-                                    </DialogTrigger>
-                                    <DialogContent>
-                                        <DialogHeader>
-                                            <DialogTitle>Are you absolutely sure?</DialogTitle>
-                                            <DialogDescription>
-                                                This action cannot be undone. This will permanently delete your
-                                                account and remove all your data from our servers.
-                                            </DialogDescription>
-                                        </DialogHeader>
-                                        <div className="flex justify-end space-x-2">
-                                            <Button variant="outline" onClick={() => setIsDeleteAccountOpen(false)}>
-                                                Cancel
-                                            </Button>
-                                            <Button variant="destructive" onClick={() => setIsDeleteAccountOpen(false)}>
-                                                Delete Account
-                                            </Button>
-                                        </div>
-                                    </DialogContent>
-                                </Dialog>
                             </div>
                         </CardContent>
                     </Card>
                 </TabsContent>
 
-                {/* Data Tab */}
                 <TabsContent value="data" className="space-y-6">
                     <Card>
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
-                                <Database className="h-5 w-5" />
+                                <Database className="w-5 h-5" />
                                 Data Management
                             </CardTitle>
                             <CardDescription>
-                                Export your data or clear specific information.
+                                Manage your data and account preferences.
                             </CardDescription>
                         </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="flex items-center justify-between p-4 border rounded-md">
+                        <CardContent className="space-y-6">
+                            <div className="space-y-4">
                                 <div>
-                                    <p className="font-medium">Export All Data</p>
-                                    <p className="text-sm text-muted-foreground">
-                                        Download all your clients, tasks, and settings
-                                    </p>
-                                </div>
-                                <Button variant="outline">
-                                    <Upload className="h-4 w-4 mr-2" />
-                                    Export
-                                </Button>
-                            </div>
-                            <div className="flex items-center justify-between p-4 border rounded-md">
-                                <div>
-                                    <p className="font-medium">Clear Completed Tasks</p>
-                                    <p className="text-sm text-muted-foreground">
-                                        Remove all completed tasks from your account
-                                    </p>
-                                </div>
-                                <Button variant="outline">
-                                    Clear Tasks
-                                </Button>
-                            </div>
-                            <div className="flex items-center justify-between p-4 border rounded-md">
-                                <div>
-                                    <p className="font-medium">Reset Preferences</p>
-                                    <p className="text-sm text-muted-foreground">
-                                        Reset all preferences to default values
-                                    </p>
-                                </div>
-                                <Button variant="outline">
-                                    Reset
-                                </Button>
-                            </div>
-                        </CardContent>
-                    </Card>
+                                    <h4 className="text-sm font-medium text-muted-foreground mb-2">Cleanup Actions</h4>
+                                    <div className="space-y-2">
+                                        <Dialog open={isClearTasksOpen} onOpenChange={setIsClearTasksOpen}>
+                                            <DialogTrigger asChild>
+                                                <Button variant="outline" className="w-full justify-start">
+                                                    Clear Completed Tasks
+                                                </Button>
+                                            </DialogTrigger>
+                                            <DialogContent>
+                                                <DialogHeader>
+                                                    <DialogTitle>Clear Completed Tasks</DialogTitle>
+                                                    <DialogDescription>
+                                                        This will permanently delete all completed tasks. This action cannot be undone.
+                                                    </DialogDescription>
+                                                </DialogHeader>
+                                                <div className="flex justify-end gap-2">
+                                                    <Button variant="outline" onClick={() => setIsClearTasksOpen(false)}>
+                                                        Cancel
+                                                    </Button>
+                                                    <Button variant="destructive" onClick={handleClearCompletedTasks}>
+                                                        Clear Tasks
+                                                    </Button>
+                                                </div>
+                                            </DialogContent>
+                                        </Dialog>
 
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Account Statistics</CardTitle>
-                            <CardDescription>
-                                Overview of your account usage and data.
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="grid gap-4 md:grid-cols-3">
-                                <div className="text-center p-4 border rounded-md">
-                                    <p className="text-2xl font-bold">12</p>
-                                    <p className="text-sm text-muted-foreground">Total Clients</p>
+                                        <Dialog open={isCleanupClientsOpen} onOpenChange={setIsCleanupClientsOpen}>
+                                            <DialogTrigger asChild>
+                                                <Button variant="outline" className="w-full justify-start">
+                                                    Cleanup Inactive Clients
+                                                </Button>
+                                            </DialogTrigger>
+                                            <DialogContent>
+                                                <DialogHeader>
+                                                    <DialogTitle>Cleanup Inactive Clients</DialogTitle>
+                                                    <DialogDescription>
+                                                        This will remove clients that have been inactive for more than 30 days along with their associated tasks. This action cannot be undone.
+                                                    </DialogDescription>
+                                                </DialogHeader>
+                                                <div className="flex justify-end gap-2">
+                                                    <Button variant="outline" onClick={() => setIsCleanupClientsOpen(false)}>
+                                                        Cancel
+                                                    </Button>
+                                                    <Button variant="destructive" onClick={handleCleanupInactiveClients}>
+                                                        Cleanup Clients
+                                                    </Button>
+                                                </div>
+                                            </DialogContent>
+                                        </Dialog>
+                                    </div>
                                 </div>
-                                <div className="text-center p-4 border rounded-md">
-                                    <p className="text-2xl font-bold">24</p>
-                                    <p className="text-sm text-muted-foreground">Active Tasks</p>
-                                </div>
-                                <div className="text-center p-4 border rounded-md">
-                                    <p className="text-2xl font-bold">3</p>
-                                    <p className="text-sm text-muted-foreground">Months Active</p>
-                                </div>
+
+                                <Separator />
+
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle>Account Statistics</CardTitle>
+                                        <CardDescription>
+                                            Overview of your account activity and usage.
+                                        </CardDescription>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                            <StatsCard
+                                                title="Total Clients"
+                                                value={accountStats.totalClients}
+                                                description="All time"
+                                            />
+                                            <StatsCard
+                                                title="Active Clients"
+                                                value={accountStats.activeClients}
+                                                description="Currently active"
+                                            />
+                                            <StatsCard
+                                                title="Active Tasks"
+                                                value={accountStats.activeTasks}
+                                                description="In progress"
+                                            />
+                                            <StatsCard
+                                                title="Completed Tasks"
+                                                value={accountStats.completedTasks}
+                                                description="All time"
+                                            />
+                                        </div>
+                                    </CardContent>
+                                </Card>
                             </div>
                         </CardContent>
                     </Card>
@@ -683,4 +551,3 @@ export default function SettingsTab() {
         </div>
     )
 }
-
