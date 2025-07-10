@@ -7,12 +7,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
 import { DashboardService } from '@/lib/dashboardService'
 import { Task, Client } from '@/lib/types'
 import useSupabaseSession from '@/hooks/useSupabaseSession'
+import AddTaskDialog from '@/components/AddTaskDialog'
+import AddClientDialog from '@/components/AddClientDialog'
 
 // Dummy data for demonstration
 const dummyTasks: Task[] = [
@@ -124,7 +123,6 @@ export default function TasksTab() {
     const [searchTerm, setSearchTerm] = useState('')
     const [loading, setLoading] = useState(true)
     const [activeFilter, setActiveFilter] = useState<'all' | 'due_today' | 'due_this_week' | 'overdue'>('all')
-    const [isAddTaskOpen, setIsAddTaskOpen] = useState(false)
 
     const fetchTasks = async () => {
         try {
@@ -244,52 +242,15 @@ export default function TasksTab() {
                         Manage and track all your tasks and deadlines.
                     </p>
                 </div>
-                <Dialog open={isAddTaskOpen} onOpenChange={setIsAddTaskOpen}>
-                    <DialogTrigger asChild>
+                <div className="flex gap-2">
+
+                    <AddTaskDialog onTaskAdded={fetchTasks} trigger={
                         <Button>
                             <Plus className="h-4 w-4 mr-2" />
                             Add Task
                         </Button>
-                    </DialogTrigger>
-                    <DialogContent className="sm:max-w-[425px]">
-                        <DialogHeader>
-                            <DialogTitle>Add New Task</DialogTitle>
-                            <DialogDescription>
-                                Create a new task and assign it to a client.
-                            </DialogDescription>
-                        </DialogHeader>
-                        <div className="grid gap-4 py-4">
-                            <div className="grid gap-2">
-                                <Label htmlFor="task-title">Task Title</Label>
-                                <Input id="task-title" placeholder="Enter task title" />
-                            </div>
-                            <div className="grid gap-2">
-                                <Label htmlFor="task-client">Client</Label>
-                                <Input id="task-client" placeholder="Select client" />
-                            </div>
-                            <div className="grid gap-2">
-                                <Label htmlFor="task-due-date">Due Date</Label>
-                                <Input id="task-due-date" type="date" />
-                            </div>
-                            <div className="grid gap-2">
-                                <Label htmlFor="task-status">Status</Label>
-                                <Input id="task-status" placeholder="To Do" />
-                            </div>
-                            <div className="grid gap-2">
-                                <Label htmlFor="task-description">Description</Label>
-                                <Textarea id="task-description" placeholder="Task description..." />
-                            </div>
-                        </div>
-                        <div className="flex justify-end space-x-2">
-                            <Button variant="outline" onClick={() => setIsAddTaskOpen(false)}>
-                                Cancel
-                            </Button>
-                            <Button onClick={() => setIsAddTaskOpen(false)}>
-                                Add Task
-                            </Button>
-                        </div>
-                    </DialogContent>
-                </Dialog>
+                    } />
+                </div>
             </div>
 
             {/* Filters and Search */}
@@ -415,10 +376,10 @@ export default function TasksTab() {
                                         </TableCell>
                                         <TableCell>
                                             <div className={`flex items-center ${isOverdue(task.due_date) && task.status !== 'completed'
-                                                    ? 'text-red-600'
-                                                    : isDueToday(task.due_date)
-                                                        ? 'text-orange-600 font-medium'
-                                                        : 'text-muted-foreground'
+                                                ? 'text-red-600'
+                                                : isDueToday(task.due_date)
+                                                    ? 'text-orange-600 font-medium'
+                                                    : 'text-muted-foreground'
                                                 }`}>
                                                 <Calendar className="h-3 w-3 mr-1" />
                                                 {formatDate(task.due_date)}
@@ -447,10 +408,12 @@ export default function TasksTab() {
                             </p>
                             {!searchTerm && activeFilter === 'all' && (
                                 <div className="mt-6">
-                                    <Button onClick={() => setIsAddTaskOpen(true)}>
-                                        <Plus className="h-4 w-4 mr-2" />
-                                        Add Task
-                                    </Button>
+                                    <AddTaskDialog onTaskAdded={fetchTasks} trigger={
+                                        <Button>
+                                            <Plus className="h-4 w-4 mr-2" />
+                                            Add Task
+                                        </Button>
+                                    } />
                                 </div>
                             )}
                         </div>

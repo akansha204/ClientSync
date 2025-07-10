@@ -8,12 +8,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
 import { DashboardService } from '@/lib/dashboardService'
 import { Client } from '@/lib/types'
 import useSupabaseSession from '@/hooks/useSupabaseSession'
+import AddClientDialog from '@/components/AddClientDialog'
+import AddTaskDialog from '@/components/AddTaskDialog'
 
 // Dummy data for demonstration
 const dummyClients = [
@@ -106,7 +106,6 @@ export default function ClientsTab() {
     const [loading, setLoading] = useState(true)
     const [selectedClient, setSelectedClient] = useState<Client | null>(null)
     const [showClientDetails, setShowClientDetails] = useState(false)
-    const [isAddClientOpen, setIsAddClientOpen] = useState(false)
 
     const fetchClients = async () => {
         try {
@@ -245,9 +244,15 @@ export default function ClientsTab() {
                                 ))}
                             </div>
                             <div className="mt-6 space-y-2">
-                                <Button className="w-full" size="sm">
-                                    Add Task
-                                </Button>
+                                <AddTaskDialog
+                                    preSelectedClientId={selectedClient.id}
+                                    onTaskAdded={fetchClients}
+                                    trigger={
+                                        <Button className="w-full" size="sm">
+                                            Add Task
+                                        </Button>
+                                    }
+                                />
                                 <Button variant="outline" className="w-full" size="sm">
                                     Generate Follow-up Email
                                 </Button>
@@ -269,52 +274,14 @@ export default function ClientsTab() {
                         Manage your clients and their information.
                     </p>
                 </div>
-                <Dialog open={isAddClientOpen} onOpenChange={setIsAddClientOpen}>
-                    <DialogTrigger asChild>
+                <div className="flex gap-2">
+                    <AddClientDialog onClientAdded={fetchClients} trigger={
                         <Button>
                             <Plus className="h-4 w-4 mr-2" />
                             Add Client
                         </Button>
-                    </DialogTrigger>
-                    <DialogContent className="sm:max-w-[425px]">
-                        <DialogHeader>
-                            <DialogTitle>Add New Client</DialogTitle>
-                            <DialogDescription>
-                                Add a new client to your database.
-                            </DialogDescription>
-                        </DialogHeader>
-                        <div className="grid gap-4 py-4">
-                            <div className="grid gap-2">
-                                <Label htmlFor="name">Name</Label>
-                                <Input id="name" placeholder="Client name" />
-                            </div>
-                            <div className="grid gap-2">
-                                <Label htmlFor="email">Email</Label>
-                                <Input id="email" type="email" placeholder="client@example.com" />
-                            </div>
-                            <div className="grid gap-2">
-                                <Label htmlFor="company">Company</Label>
-                                <Input id="company" placeholder="Company name" />
-                            </div>
-                            <div className="grid gap-2">
-                                <Label htmlFor="phone">Phone</Label>
-                                <Input id="phone" placeholder="+1 (555) 123-4567" />
-                            </div>
-                            <div className="grid gap-2">
-                                <Label htmlFor="notes">Notes</Label>
-                                <Textarea id="notes" placeholder="Additional notes..." />
-                            </div>
-                        </div>
-                        <div className="flex justify-end space-x-2">
-                            <Button variant="outline" onClick={() => setIsAddClientOpen(false)}>
-                                Cancel
-                            </Button>
-                            <Button onClick={() => setIsAddClientOpen(false)}>
-                                Add Client
-                            </Button>
-                        </div>
-                    </DialogContent>
-                </Dialog>
+                    } />
+                </div>
             </div>
 
             {/* Search and Filters */}
@@ -456,10 +423,12 @@ export default function ClientsTab() {
                             </p>
                             {!searchTerm && (
                                 <div className="mt-6">
-                                    <Button onClick={() => setIsAddClientOpen(true)}>
-                                        <Plus className="h-4 w-4 mr-2" />
-                                        Add Client
-                                    </Button>
+                                    <AddClientDialog onClientAdded={fetchClients} trigger={
+                                        <Button>
+                                            <Plus className="h-4 w-4 mr-2" />
+                                            Add Client
+                                        </Button>
+                                    } />
                                 </div>
                             )}
                         </div>

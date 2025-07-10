@@ -46,8 +46,8 @@ export default function LandingPage() {
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
             {/* Header */}
-            <header className="border-b bg-white/80 backdrop-blur-sm dark:bg-slate-900/80 sticky top-0 z-50">
-                <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+            <header className="border-b bg-white/80 backdrop-blur-sm dark:bg-slate-900/80 sticky top-0 z-50 border-rounded-lg">
+                <div className="container mx-auto px-4 py-4 flex items-center justify-between max-w-6xl">
                     <div className="flex items-center space-x-2">
                         <Image
                             src="/black logo.png"
@@ -68,7 +68,7 @@ export default function LandingPage() {
                                         <Avatar className="h-8 w-8">
                                             <AvatarImage src={session.user?.user_metadata?.avatar_url} alt="User" />
                                             <AvatarFallback>
-                                                <User className="h-4 w-4" />
+                                                <User className="h-8 w-8" />
                                             </AvatarFallback>
                                         </Avatar>
                                     </Button>

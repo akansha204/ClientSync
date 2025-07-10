@@ -42,6 +42,7 @@ export default function SettingsTab() {
     const [isDeleteAccountOpen, setIsDeleteAccountOpen] = useState(false)
     const [isClearTasksOpen, setIsClearTasksOpen] = useState(false)
     const [isCleanupClientsOpen, setIsCleanupClientsOpen] = useState(false)
+    const [avatarUploading, setAvatarUploading] = useState(false)
 
     // Profile state
     const [profile, setProfile] = useState<UserProfile>({
@@ -99,8 +100,8 @@ export default function SettingsTab() {
             ])
 
             const activeClients = clients.filter((c: any) => c.status === 'active')
-            const activeTasks = tasks.filter((t: any) => !t.is_completed)
-            const completedTasks = tasks.filter((t: any) => t.is_completed)
+            const activeTasks = tasks.filter((t: any) => t.status !== 'completed')
+            const completedTasks = tasks.filter((t: any) => t.status === 'completed')
 
             setAccountStats({
                 totalClients: clients.length,
@@ -110,6 +111,44 @@ export default function SettingsTab() {
             })
         } catch (error) {
             console.error('Error loading account stats:', error)
+        }
+    }
+
+    const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0]
+        if (!file || !session?.user?.id) return
+
+        // Check file type
+        if (!file.type.startsWith('image/')) {
+            alert('Please select an image file')
+            return
+        }
+
+        // Check file size (max 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+            alert('File size must be less than 5MB')
+            return
+        }
+
+        setAvatarUploading(true)
+        try {
+            const avatarUrl = await DashboardService.uploadAvatar(session.user.id, file)
+            if (avatarUrl) {
+                setProfile({ ...profile, avatar_url: avatarUrl })
+                // Also update the profile in the database
+                await DashboardService.updateUserProfile(session.user.id, {
+                    ...profile,
+                    avatar_url: avatarUrl
+                })
+                alert('Avatar uploaded successfully!')
+            } else {
+                alert('Failed to upload avatar. Please try again.')
+            }
+        } catch (error) {
+            console.error('Error uploading avatar:', error)
+            alert('Error uploading avatar. Please try again.')
+        } finally {
+            setAvatarUploading(false)
         }
     }
 
@@ -125,9 +164,10 @@ export default function SettingsTab() {
                 bio: profile.bio,
                 avatar_url: profile.avatar_url
             })
-            console.log('Profile updated successfully')
+            alert('Profile updated successfully!')
         } catch (error) {
             console.error('Error updating profile:', error)
+            alert('Error updating profile. Please try again.')
         } finally {
             setSaving(false)
         }
@@ -137,21 +177,31 @@ export default function SettingsTab() {
         if (!session?.user?.id) return
 
         if (passwords.newPassword !== passwords.confirmPassword) {
-            console.error('Passwords do not match')
+            alert('Passwords do not match')
+            return
+        }
+
+        if (passwords.newPassword.length < 6) {
+            alert('Password must be at least 6 characters long')
             return
         }
 
         setSaving(true)
         try {
-            await DashboardService.updatePassword(session.user.id, passwords.newPassword)
-            setPasswords({
-                currentPassword: '',
-                newPassword: '',
-                confirmPassword: ''
-            })
-            console.log('Password updated successfully')
+            const success = await DashboardService.updatePassword(session.user.id, passwords.newPassword)
+            if (success) {
+                setPasswords({
+                    currentPassword: '',
+                    newPassword: '',
+                    confirmPassword: ''
+                })
+                alert('Password updated successfully!')
+            } else {
+                alert('Error updating password. Please try again.')
+            }
         } catch (error) {
             console.error('Error updating password:', error)
+            alert('Error updating password. Please try again.')
         } finally {
             setSaving(false)
         }
@@ -161,11 +211,16 @@ export default function SettingsTab() {
         if (!session?.user?.id) return
 
         try {
-            await DashboardService.deleteUserAccount(session.user.id)
-            console.log('Account deleted successfully')
-            // The user will be redirected by the auth state change
+            const success = await DashboardService.deleteUserAccount(session.user.id)
+            if (success) {
+                alert('Account deleted successfully. You will be redirected to the login page.')
+                // The user will be redirected by the auth state change
+            } else {
+                alert('Error deleting account. Please try again.')
+            }
         } catch (error) {
             console.error('Error deleting account:', error)
+            alert('Error deleting account. Please try again.')
         }
         setIsDeleteAccountOpen(false)
     }
@@ -174,11 +229,16 @@ export default function SettingsTab() {
         if (!session?.user?.id) return
 
         try {
-            await DashboardService.clearCompletedTasks(session.user.id)
-            await loadAccountStats() // Refresh stats
-            console.log('Completed tasks cleared successfully')
+            const success = await DashboardService.clearCompletedTasks(session.user.id)
+            if (success) {
+                await loadAccountStats() // Refresh stats
+                alert('Completed tasks cleared successfully!')
+            } else {
+                alert('Error clearing completed tasks. Please try again.')
+            }
         } catch (error) {
             console.error('Error clearing completed tasks:', error)
+            alert('Error clearing completed tasks. Please try again.')
         }
         setIsClearTasksOpen(false)
     }
@@ -187,11 +247,16 @@ export default function SettingsTab() {
         if (!session?.user?.id) return
 
         try {
-            await DashboardService.cleanupInactiveClients(session.user.id)
-            await loadAccountStats() // Refresh stats
-            console.log('Inactive clients cleaned up successfully')
+            const result = await DashboardService.triggerCleanup(session.user.id)
+            if (result.success) {
+                await loadAccountStats() // Refresh stats
+                alert(`${result.message} (${result.deletedCount} clients removed)`)
+            } else {
+                alert('Error cleaning up inactive clients. Please try again.')
+            }
         } catch (error) {
             console.error('Error cleaning up inactive clients:', error)
+            alert('Error cleaning up inactive clients. Please try again.')
         }
         setIsCleanupClientsOpen(false)
     }
@@ -235,10 +300,28 @@ export default function SettingsTab() {
                                         {profile.full_name?.split(' ').map(n => n[0]).join('') || 'U'}
                                     </AvatarFallback>
                                 </Avatar>
-                                <Button variant="outline" size="sm" className="gap-2">
-                                    <Camera className="w-4 h-4" />
-                                    Change Photo
-                                </Button>
+                                <div className="flex flex-col gap-2">
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="gap-2"
+                                        onClick={() => document.getElementById('avatar-upload')?.click()}
+                                        disabled={avatarUploading}
+                                    >
+                                        <Camera className="w-4 h-4" />
+                                        {avatarUploading ? 'Uploading...' : 'Change Photo'}
+                                    </Button>
+                                    <p className="text-xs text-muted-foreground">
+                                        Max size: 5MB. Supports JPG, PNG, GIF.
+                                    </p>
+                                </div>
+                                <input
+                                    id="avatar-upload"
+                                    type="file"
+                                    accept="image/*"
+                                    className="hidden"
+                                    onChange={handleAvatarUpload}
+                                />
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

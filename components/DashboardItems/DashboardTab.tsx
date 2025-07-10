@@ -7,7 +7,8 @@ import { Button } from '@/components/ui/button'
 import { DashboardService } from '@/lib/dashboardService'
 import { DashboardStats, Client, Task, FollowUp } from '@/lib/types'
 import useSupabaseSession from '@/hooks/useSupabaseSession'
-
+import AddClientDialog from '@/components/AddClientDialog'
+import AddTaskDialog from '@/components/AddTaskDialog'
 export default function DashboardTab() {
     const session = useSupabaseSession()
     const [stats, setStats] = useState<DashboardStats | null>(null)
@@ -47,24 +48,12 @@ export default function DashboardTab() {
         }
     }, [session])
 
-    const getTaskPriorityColor = (priority: string) => {
-        switch (priority) {
-            case 'urgent': return 'text-red-600 bg-red-50 border-red-200'
-            case 'high': return 'text-orange-600 bg-orange-50 border-orange-200'
-            case 'medium': return 'text-yellow-600 bg-yellow-50 border-yellow-200'
-            case 'low': return 'text-green-600 bg-green-50 border-green-200'
-            default: return 'text-gray-600 bg-gray-50 border-gray-200'
-        }
-    }
-
     const getTaskStatusColor = (status: string) => {
         switch (status.toLowerCase()) {
             case 'completed': return 'text-green-600 bg-green-50'
             case 'in_progress':
             case 'in progress': return 'text-blue-600 bg-blue-50'
             case 'pending':
-            case 'todo': return 'text-yellow-600 bg-yellow-50'
-            case 'overdue': return 'text-red-600 bg-red-50'
             default: return 'text-gray-600 bg-gray-50'
         }
     }
@@ -129,21 +118,21 @@ export default function DashboardTab() {
                 <StatsCard
                     title="Total Clients"
                     value={stats?.totalClients || 0}
-                    description={`${stats?.activeClients || 0} active clients`}
+                    description={`${stats?.activeClients || 0} total clients`}
                     icon={<Users className="h-4 w-4" />}
                 />
                 <StatsCard
-                    title="Pending Tasks"
-                    value={stats?.pendingTasks || 0}
+                    title="Overdue Tasks"
+                    value={stats?.overdueTasks || 0}
                     description={`${stats?.overdueTasks || 0} overdue`}
                     icon={<CheckSquare className="h-4 w-4" />}
                 />
-                <StatsCard
+                {/* <StatsCard
                     title="Upcoming Follow-ups"
                     value={stats?.upcomingFollowUps || 0}
                     description="Next 30 days"
                     icon={<Calendar className="h-4 w-4" />}
-                />
+                /> */}
                 <StatsCard
                     title="Completed This Week"
                     value={stats?.completedTasksThisWeek || 0}
@@ -185,7 +174,7 @@ export default function DashboardTab() {
                 {/* Due Tasks */}
                 <div className="bg-card text-card-foreground rounded-lg border p-6 shadow-sm">
                     <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-lg font-semibold">Due Tasks</h3>
+                        <h3 className="text-lg font-semibold">Pending Tasks</h3>
                         <CheckSquare className="h-5 w-5 text-muted-foreground" />
                     </div>
                     <div className="space-y-3 max-h-80 overflow-y-auto">
@@ -238,12 +227,12 @@ export default function DashboardTab() {
                                             <p className="text-sm text-muted-foreground">{followUp.clients?.name}</p>
                                             <div className="mt-2">
                                                 <span className={`px-2 py-1 rounded-full text-xs ${followUp.type === 'call'
-                                                        ? 'bg-blue-100 text-blue-800'
-                                                        : followUp.type === 'email'
-                                                            ? 'bg-green-100 text-green-800'
-                                                            : followUp.type === 'meeting'
-                                                                ? 'bg-purple-100 text-purple-800'
-                                                                : 'bg-gray-100 text-gray-800'
+                                                    ? 'bg-blue-100 text-blue-800'
+                                                    : followUp.type === 'email'
+                                                        ? 'bg-green-100 text-green-800'
+                                                        : followUp.type === 'meeting'
+                                                            ? 'bg-purple-100 text-purple-800'
+                                                            : 'bg-gray-100 text-gray-800'
                                                     }`}>
                                                     {followUp.type}
                                                 </span>
@@ -272,14 +261,8 @@ export default function DashboardTab() {
             <div className="bg-card text-card-foreground rounded-lg border p-6 shadow-sm">
                 <h3 className="text-lg font-semibold mb-4">Quick Actions</h3>
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                    <Button className="h-auto p-4 flex-col gap-2" variant="outline">
-                        <Users className="h-6 w-6" />
-                        <span>Add New Client</span>
-                    </Button>
-                    <Button className="h-auto p-4 flex-col gap-2" variant="outline">
-                        <CheckSquare className="h-6 w-6" />
-                        <span>Create Task</span>
-                    </Button>
+                    <AddClientDialog onClientAdded={fetchDashboardData} />
+                    <AddTaskDialog onTaskAdded={fetchDashboardData} />
                     <Button className="h-auto p-4 flex-col gap-2" variant="outline">
                         <Calendar className="h-6 w-6" />
                         <span>Schedule Follow-up</span>
