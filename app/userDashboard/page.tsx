@@ -3,6 +3,7 @@ import DashboardTab from "@/components/DashboardItems/DashboardTab";
 import ClientsTab from "@/components/DashboardItems/ClientsTab";
 import TasksTab from "@/components/DashboardItems/TasksTab";
 import SidebarNav from "@/components/Sidebar-nav";
+import SettingsTab from "@/components/DashboardItems/SettingsTab";
 import { useState } from "react";
 
 export default function Page() {
@@ -16,6 +17,8 @@ export default function Page() {
                 return <ClientsTab />;
             case 'tasks':
                 return <TasksTab />;
+            case 'settings':
+                return <SettingsTab />;
             default:
                 return <DashboardTab />;
         }
