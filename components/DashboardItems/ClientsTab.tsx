@@ -14,6 +14,7 @@ import { Client } from '@/lib/types'
 import useSupabaseSession from '@/hooks/useSupabaseSession'
 import AddClientDialog from '@/components/AddClientDialog'
 import AddTaskDialog from '@/components/AddTaskDialog'
+import GenerateEmailDialog from '@/components/GenerateEmailDialog'
 
 // Dummy data for demonstration
 const dummyClients = [
@@ -253,9 +254,11 @@ export default function ClientsTab() {
                                         </Button>
                                     }
                                 />
-                                <Button variant="outline" className="w-full" size="sm">
-                                    Generate Follow-up Email
-                                </Button>
+                                <GenerateEmailDialog
+                                    clientName={selectedClient.name}
+                                    clientEmail={selectedClient.email}
+                                    clientCompany={selectedClient.company || ''}
+                                />
                             </div>
                         </CardContent>
                     </Card>

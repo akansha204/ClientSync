@@ -164,11 +164,22 @@ export default function AddTaskDialog({ onTaskAdded, trigger, className, preSele
                             disabled={loading || loadingClients}
                         >
                             <SelectTrigger>
-                                <SelectValue placeholder={loadingClients ? "Loading clients..." : "Select a client"} />
+                                <SelectValue placeholder={
+                                    loadingClients ? "Loading clients..." :
+                                        preSelectedClientId ? "Client selected" :
+                                            "Select a client"
+                                } />
                             </SelectTrigger>
                             <SelectContent className="max-h-[200px]">
                                 {clients.length === 0 && !loadingClients && (
-                                    <div className="p-2 text-sm text-muted-foreground">No clients found</div>
+                                    <div className="p-2 text-sm text-muted-foreground">
+                                        {preSelectedClientId ? "No clients found" : "No clients available. Please add a client first."}
+                                    </div>
+                                )}
+                                {!preSelectedClientId && clients.length > 0 && (
+                                    <SelectItem value="" disabled>
+                                        <span className="text-muted-foreground">Choose a client for this task</span>
+                                    </SelectItem>
                                 )}
                                 {clients.map((client) => (
                                     <SelectItem key={client.id} value={client.id}>
