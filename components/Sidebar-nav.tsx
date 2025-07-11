@@ -15,8 +15,11 @@ import {
 } from "@/components/ui/sidebar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { User, Home, Users, CheckSquare, Settings, LogOut } from "lucide-react";
+import { ThemeToggle } from "./theme-toggle";
 import useSupabaseSession from "../hooks/useSupabaseSession";
 import supabase from "@/lib/supabaseClient";
+import { DashboardService } from "@/lib/dashboardService";
+import { useState, useEffect } from "react";
 
 interface SidebarProps {
     activeTab: string;
@@ -24,8 +27,33 @@ interface SidebarProps {
     children: React.ReactNode;
 }
 
+interface UserProfile {
+    id: string;
+    email: string;
+    full_name?: string;
+    avatar_url?: string;
+}
+
 export default function SidebarNav({ activeTab, setActiveTab, children }: SidebarProps) {
     const session = useSupabaseSession();
+    const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+
+    useEffect(() => {
+        if (session?.user?.id) {
+            loadUserProfile();
+        }
+    }, [session]);
+
+    const loadUserProfile = async () => {
+        try {
+            const profile = await DashboardService.getUserProfile(session!.user.id);
+            if (profile) {
+                setUserProfile(profile);
+            }
+        } catch (error) {
+            console.error('Error loading user profile:', error);
+        }
+    };
 
     const handleLogout = async () => {
         await supabase.auth.signOut();
@@ -63,14 +91,16 @@ export default function SidebarNav({ activeTab, setActiveTab, children }: Sideba
                     <SidebarHeader className="p-4">
                         <div className="flex flex-col items-center space-y-2">
                             <Avatar className="w-16 h-16">
-                                <AvatarImage src={session?.user?.user_metadata?.avatar_url || ""} />
+                                <AvatarImage src={userProfile?.avatar_url || session?.user?.user_metadata?.avatar_url || ""} />
                                 <AvatarFallback>
                                     <User className="h-8 w-8" />
                                 </AvatarFallback>
                             </Avatar>
                             <div className="text-center">
-                                <p className="font-semibold text-sm">{session?.user?.user_metadata?.full_name || session?.user?.user_metadata?.name || "User"}</p>
-                                <p className="text-xs text-muted-foreground">{session?.user?.email}</p>
+                                <p className="font-semibold text-sm">
+                                    {userProfile?.full_name || session?.user?.user_metadata?.full_name || session?.user?.user_metadata?.name || "User"}
+                                </p>
+                                <p className="text-xs text-muted-foreground">{userProfile?.email || session?.user?.email}</p>
                             </div>
                         </div>
                     </SidebarHeader>
@@ -117,6 +147,8 @@ export default function SidebarNav({ activeTab, setActiveTab, children }: Sideba
                         <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
                             <SidebarTrigger />
                             <h1 className="text-lg font-semibold">User Dashboard</h1>
+                            <div className="flex-1" />
+                            <ThemeToggle />
                         </header>
                         <div className="flex-1 overflow-auto p-4">
                             {children}

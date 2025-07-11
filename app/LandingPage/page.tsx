@@ -13,6 +13,8 @@ import useSupabaseSession from "@/hooks/useSupabaseSession"
 import supabase from "@/lib/supabaseClient"
 import SignupBtn from "@/components/signupBtn"
 import LoginBtn from "@/components/LoginBtn"
+import { SimpleThemeToggle } from "@/components/simple-theme-toggle"
+import { DynamicLogo } from "@/components/dynamic-logo"
 
 export default function LandingPage() {
     const session = useSupabaseSession()
@@ -49,18 +51,13 @@ export default function LandingPage() {
             <header className="border-b bg-white/80 backdrop-blur-sm dark:bg-slate-900/80 sticky top-0 z-50 border-rounded-lg">
                 <div className="container mx-auto px-4 py-4 flex items-center justify-between max-w-6xl">
                     <div className="flex items-center space-x-2">
-                        <Image
-                            src="/black logo.png"
-                            alt="ClientSync Logo"
-                            width={32}
-                            height={32}
-                            className="w-8 h-8"
-                        />
-                        <span className="text-xl font-bold bg-gradient-to-r text-black bg-clip-text hidden sm:block ">
+                        <DynamicLogo />
+                        <span className="text-xl font-bold bg-gradient-to-r text-black dark:text-white bg-clip-text hidden sm:block ">
                             ClientSync
                         </span>
                     </div>
                     <div className="flex items-center space-x-4">
+                        <SimpleThemeToggle />
                         {session ? (
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
