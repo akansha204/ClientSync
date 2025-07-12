@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
 import axios from 'axios'
 import useSupabaseSession from '@/hooks/useSupabaseSession'
+import { toast } from 'sonner'
 
 interface GenerateEmailDialogProps {
     clientName?: string
@@ -74,7 +75,7 @@ export default function GenerateEmailDialog({
                 }
             }
 
-            alert(errorMessage)
+            toast.error(errorMessage)
             setStep('select')
         } finally {
             setLoading(false)
@@ -87,7 +88,7 @@ export default function GenerateEmailDialog({
         try {
             // Check if user is authenticated
             if (!session?.access_token) {
-                alert('You must be logged in to send emails.')
+                toast.error('You must be logged in to send emails.')
                 return
             }
 
@@ -111,7 +112,7 @@ export default function GenerateEmailDialog({
             })
 
             if (response.data.success) {
-                alert(`Email sent successfully to ${clientName} from ${session.user?.email}!`)
+                toast.success(`Email sent successfully to ${clientName} from ${session.user?.email}!`)
                 setIsOpen(false)
                 // Reset state
                 setStep('select')
@@ -120,7 +121,7 @@ export default function GenerateEmailDialog({
                 setGeneratedEmail('')
                 setIsEditing(false)
             } else {
-                alert('Failed to send email. Please try again.')
+                toast.error('Failed to send email. Please try again.')
             }
         } catch (error) {
             console.error('Error sending email:', error)
@@ -134,12 +135,14 @@ export default function GenerateEmailDialog({
                     errorMessage = 'Email service not configured. Please contact administrator.'
                 } else if (error.response?.status === 400) {
                     errorMessage = 'Invalid email data. Please check the email content.'
+                } else if (error.response?.status === 403 || error.response?.data?.error?.includes('testing emails')) {
+                    errorMessage = 'Email service is in testing mode. Currently can only send to verified email addresses. Please verify your domain at resend.com/domains to send to all recipients.'
                 } else if (error.response?.data?.error) {
                     errorMessage = error.response.data.error
                 }
             }
 
-            alert(errorMessage)
+            toast.error(errorMessage)
         } finally {
             setLoading(false)
         }
@@ -221,6 +224,14 @@ export default function GenerateEmailDialog({
                                     <div><strong>Company:</strong> {clientCompany}</div>
                                     <div><strong>From:</strong> {session?.user?.email || 'Your account'}</div>
                                 </div>
+                                {/* Show warning if client email is different from user email */}
+                                {session?.user?.email && clientEmail !== session.user.email && (
+                                    <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+                                        <div className="text-sm text-yellow-800">
+                                            <strong>⚠️ Testing Mode:</strong> You can only send emails to your own address ({session.user.email}) unless you verify a domain at resend.com/domains.
+                                        </div>
+                                    </div>
+                                )}
                             </CardContent>
                         </Card>
 

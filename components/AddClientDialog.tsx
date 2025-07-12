@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { DashboardService } from '@/lib/dashboardService'
 import { Client } from '@/lib/types'
 import useSupabaseSession from '@/hooks/useSupabaseSession'
+import { toast } from 'sonner'
 
 interface AddClientDialogProps {
     onClientAdded?: () => void
@@ -66,7 +67,7 @@ export default function AddClientDialog({ onClientAdded, trigger, className, edi
 
     const handleSubmit = async () => {
         if (!formData.name || !formData.email || !formData.company) {
-            alert('Name, email, and company are required')
+            toast.error('Name, email, and company are required')
             return
         }
 
@@ -75,7 +76,7 @@ export default function AddClientDialog({ onClientAdded, trigger, className, edi
             const userId = session?.user?.id
 
             if (!userId) {
-                alert('You must be logged in to add a client')
+                toast.error('You must be logged in to add a client')
                 return
             }
 
@@ -105,13 +106,16 @@ export default function AddClientDialog({ onClientAdded, trigger, className, edi
 
             setIsOpen(false)
 
+            // Show success toast
+            toast.success(`Client ${isEditing ? 'updated' : 'created'} successfully!`)
+
             // Call callback to refresh data
             if (onClientAdded) {
                 onClientAdded()
             }
         } catch (error) {
             console.error(`Error ${isEditing ? 'updating' : 'creating'} client:`, error)
-            alert(`Failed to ${isEditing ? 'update' : 'create'} client. Please try again.`)
+            toast.error(`Failed to ${isEditing ? 'update' : 'create'} client. Please try again.`)
         } finally {
             setLoading(false)
         }

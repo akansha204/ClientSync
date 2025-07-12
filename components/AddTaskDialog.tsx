@@ -12,19 +12,23 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar'
 import { cn } from '@/lib/utils'
 import { DashboardService } from '@/lib/dashboardService'
-import { Client } from '@/lib/types'
+import { Client, Task } from '@/lib/types'
 import useSupabaseSession from '@/hooks/useSupabaseSession'
+import { toast } from 'sonner'
 
 interface AddTaskDialogProps {
     onTaskAdded?: () => void
     trigger?: React.ReactNode
     className?: string
     preSelectedClientId?: string
+    editingTask?: Task
+    isOpen?: boolean
+    onOpenChange?: (open: boolean) => void
 }
 
-export default function AddTaskDialog({ onTaskAdded, trigger, className, preSelectedClientId }: AddTaskDialogProps) {
+export default function AddTaskDialog({ onTaskAdded, trigger, className, preSelectedClientId, editingTask, isOpen, onOpenChange }: AddTaskDialogProps) {
     const session = useSupabaseSession()
-    const [isOpen, setIsOpen] = useState(false)
+    const [internalIsOpen, setInternalIsOpen] = useState(false)
     const [loading, setLoading] = useState(false)
     const [clients, setClients] = useState<Client[]>([])
     const [loadingClients, setLoadingClients] = useState(true)
@@ -35,6 +39,12 @@ export default function AddTaskDialog({ onTaskAdded, trigger, className, preSele
         due_date: undefined as Date | undefined,
         status: 'pending' as 'pending' | 'in_progress' | 'completed'
     })
+
+    // Use external isOpen/onOpenChange if provided, otherwise use internal state
+    const dialogOpen = isOpen !== undefined ? isOpen : internalIsOpen
+    const setDialogOpen = onOpenChange || setInternalIsOpen
+
+    const isEditMode = !!editingTask
 
     const fetchClients = async () => {
         try {
@@ -52,10 +62,10 @@ export default function AddTaskDialog({ onTaskAdded, trigger, className, preSele
     }
 
     useEffect(() => {
-        if (session && isOpen) {
+        if (session && dialogOpen) {
             fetchClients()
         }
-    }, [session, isOpen])
+    }, [session, dialogOpen])
 
     useEffect(() => {
         if (preSelectedClientId) {
@@ -66,6 +76,19 @@ export default function AddTaskDialog({ onTaskAdded, trigger, className, preSele
         }
     }, [preSelectedClientId])
 
+    // Initialize form with editing task data
+    useEffect(() => {
+        if (editingTask) {
+            setFormData({
+                title: editingTask.title,
+                description: editingTask.description || '',
+                client_id: editingTask.client_id,
+                due_date: new Date(editingTask.due_date),
+                status: editingTask.status as 'pending' | 'in_progress' | 'completed'
+            })
+        }
+    }, [editingTask])
+
     const handleInputChange = (field: string, value: string) => {
         setFormData(prev => ({
             ...prev,
@@ -75,7 +98,7 @@ export default function AddTaskDialog({ onTaskAdded, trigger, className, preSele
 
     const handleSubmit = async () => {
         if (!formData.title || !formData.client_id || !formData.due_date || !formData.status) {
-            alert('Title, client, due date, and status are required')
+            toast.error('Title, client, due date, and status are required')
             return
         }
 
@@ -84,19 +107,33 @@ export default function AddTaskDialog({ onTaskAdded, trigger, className, preSele
             const userId = session?.user?.id
 
             if (!userId) {
-                alert('You must be logged in to add a task')
+                toast.error('You must be logged in to add a task')
                 return
             }
 
-            // Call the dashboard service to create the task
-            await DashboardService.createTask({
-                title: formData.title,
-                description: formData.description,
-                client_id: formData.client_id,
-                due_date: format(formData.due_date, 'yyyy-MM-dd'),
-                status: formData.status,
-                userId
-            })
+            if (isEditMode && editingTask) {
+                // Update existing task
+                await DashboardService.updateTask(editingTask.id, {
+                    title: formData.title,
+                    description: formData.description,
+                    client_id: formData.client_id,
+                    due_date: format(formData.due_date, 'yyyy-MM-dd'),
+                    status: formData.status,
+                    updated_at: new Date().toISOString()
+                }, userId)
+                toast.success('Task updated successfully!')
+            } else {
+                // Create new task
+                await DashboardService.createTask({
+                    title: formData.title,
+                    description: formData.description,
+                    client_id: formData.client_id,
+                    due_date: format(formData.due_date, 'yyyy-MM-dd'),
+                    status: formData.status,
+                    userId
+                })
+                toast.success('Task created successfully!')
+            }
 
             // Reset form
             setFormData({
@@ -107,15 +144,15 @@ export default function AddTaskDialog({ onTaskAdded, trigger, className, preSele
                 status: 'pending'
             })
 
-            setIsOpen(false)
+            setDialogOpen(false)
 
             // Call callback to refresh data
             if (onTaskAdded) {
                 onTaskAdded()
             }
         } catch (error) {
-            console.error('Error creating task:', error)
-            alert('Failed to create task. Please try again.')
+            console.error('Error saving task:', error)
+            toast.error(`Failed to ${isEditMode ? 'update' : 'create'} task. Please try again.`)
         } finally {
             setLoading(false)
         }
@@ -133,15 +170,22 @@ export default function AddTaskDialog({ onTaskAdded, trigger, className, preSele
     )
 
     return (
-        <Dialog open={isOpen} onOpenChange={setIsOpen}>
-            <DialogTrigger asChild>
-                {trigger || defaultTrigger}
-            </DialogTrigger>
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            {!isEditMode && trigger && (
+                <DialogTrigger asChild>
+                    {trigger}
+                </DialogTrigger>
+            )}
+            {!isEditMode && !trigger && (
+                <DialogTrigger asChild>
+                    {defaultTrigger}
+                </DialogTrigger>
+            )}
             <DialogContent className="sm:max-w-[525px]">
                 <DialogHeader>
-                    <DialogTitle>Create New Task</DialogTitle>
+                    <DialogTitle>{isEditMode ? 'Edit Task' : 'Create New Task'}</DialogTitle>
                     <DialogDescription>
-                        Add a new task for one of your clients.
+                        {isEditMode ? 'Update the task details below.' : 'Add a new task for one of your clients.'}
                     </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
@@ -175,11 +219,6 @@ export default function AddTaskDialog({ onTaskAdded, trigger, className, preSele
                                     <div className="p-2 text-sm text-muted-foreground">
                                         {preSelectedClientId ? "No clients found" : "No clients available. Please add a client first."}
                                     </div>
-                                )}
-                                {!preSelectedClientId && clients.length > 0 && (
-                                    <SelectItem value="" disabled>
-                                        <span className="text-muted-foreground">Choose a client for this task</span>
-                                    </SelectItem>
                                 )}
                                 {clients.map((client) => (
                                     <SelectItem key={client.id} value={client.id}>
@@ -257,7 +296,7 @@ export default function AddTaskDialog({ onTaskAdded, trigger, className, preSele
                 <div className="flex justify-end space-x-2">
                     <Button
                         variant="outline"
-                        onClick={() => setIsOpen(false)}
+                        onClick={() => setDialogOpen(false)}
                         disabled={loading}
                     >
                         Cancel
@@ -266,7 +305,7 @@ export default function AddTaskDialog({ onTaskAdded, trigger, className, preSele
                         onClick={handleSubmit}
                         disabled={loading || !formData.title || !formData.client_id || !formData.due_date}
                     >
-                        {loading ? 'Creating...' : 'Create Task'}
+                        {loading ? (isEditMode ? 'Updating...' : 'Creating...') : (isEditMode ? 'Update Task' : 'Create Task')}
                     </Button>
                 </div>
             </DialogContent>

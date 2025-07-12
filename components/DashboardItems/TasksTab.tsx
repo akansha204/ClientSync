@@ -1,17 +1,19 @@
 "use client"
 import React, { useState, useEffect } from 'react'
-import { Plus, Calendar, User, ChevronDown, Filter, Search } from 'lucide-react'
+import { Plus, Calendar, User, ChevronDown, Filter, Search, MoreHorizontal, Edit, Trash2, Eye } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { DashboardService } from '@/lib/dashboardService'
 import { Task, Client } from '@/lib/types'
 import useSupabaseSession from '@/hooks/useSupabaseSession'
 import AddTaskDialog from '@/components/AddTaskDialog'
 import AddClientDialog from '@/components/AddClientDialog'
+import { toast } from 'sonner'
 
 export default function TasksTab() {
     const session = useSupabaseSession()
@@ -19,6 +21,10 @@ export default function TasksTab() {
     const [searchTerm, setSearchTerm] = useState('')
     const [loading, setLoading] = useState(true)
     const [activeFilter, setActiveFilter] = useState<'all' | 'due_today' | 'due_this_week' | 'overdue'>('all')
+    const [selectedTask, setSelectedTask] = useState<Task | null>(null)
+    const [showEditDialog, setShowEditDialog] = useState(false)
+    const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+    const [deleteLoading, setDeleteLoading] = useState(false)
 
     const fetchTasks = async () => {
         try {
@@ -50,11 +56,44 @@ export default function TasksTab() {
                 return <Badge variant="default" className="bg-blue-100 text-blue-800 hover:bg-blue-100">In Progress</Badge>
             case 'todo':
             case 'pending':
-                return <Badge variant="default" className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">To Do</Badge>
+                return <Badge variant="default" className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">Pending</Badge>
             case 'overdue':
                 return <Badge variant="destructive">Overdue</Badge>
             default:
                 return <Badge variant="secondary">{status}</Badge>
+        }
+    }
+
+    const handleEditTask = (task: Task) => {
+        setSelectedTask(task)
+        setShowEditDialog(true)
+    }
+
+    const handleDeleteTask = (task: Task) => {
+        setSelectedTask(task)
+        setShowDeleteDialog(true)
+    }
+
+    const confirmDeleteTask = async () => {
+        if (!selectedTask || !session?.user?.id) return
+
+        try {
+            setDeleteLoading(true)
+            const success = await DashboardService.deleteTask(selectedTask.id, session.user.id)
+
+            if (success) {
+                toast.success('Task deleted successfully')
+                fetchTasks() // Refresh the tasks list
+                setShowDeleteDialog(false)
+                setSelectedTask(null)
+            } else {
+                toast.error('Failed to delete task')
+            }
+        } catch (error) {
+            console.error('Error deleting task:', error)
+            toast.error('Failed to delete task')
+        } finally {
+            setDeleteLoading(false)
         }
     }
 
@@ -240,6 +279,7 @@ export default function TasksTab() {
                                     <TableHead>Client</TableHead>
                                     <TableHead>Due Date</TableHead>
                                     <TableHead>Status</TableHead>
+                                    <TableHead className="w-[70px]">Actions</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -275,6 +315,32 @@ export default function TasksTab() {
                                         <TableCell>
                                             {getStatusBadge(task.status)}
                                         </TableCell>
+                                        <TableCell>
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button variant="ghost" className="h-8 w-8 p-0">
+                                                        <MoreHorizontal className="h-4 w-4" />
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end">
+                                                    <DropdownMenuItem
+                                                        onClick={() => handleEditTask(task)}
+                                                        className="cursor-pointer"
+                                                    >
+                                                        <Edit className="h-4 w-4 mr-2" />
+                                                        Edit Task
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuSeparator />
+                                                    <DropdownMenuItem
+                                                        onClick={() => handleDeleteTask(task)}
+                                                        className="cursor-pointer text-red-600 focus:text-red-600"
+                                                    >
+                                                        <Trash2 className="h-4 w-4 mr-2" />
+                                                        Delete Task
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </TableCell>
                                     </TableRow>
                                 ))}
                             </TableBody>
@@ -307,6 +373,48 @@ export default function TasksTab() {
                     )}
                 </CardContent>
             </Card>
+
+            {/* Edit Task Dialog */}
+            {selectedTask && (
+                <AddTaskDialog
+                    onTaskAdded={() => {
+                        fetchTasks()
+                        setShowEditDialog(false)
+                        setSelectedTask(null)
+                    }}
+                    editingTask={selectedTask}
+                    isOpen={showEditDialog}
+                    onOpenChange={setShowEditDialog}
+                />
+            )}
+
+            {/* Delete Confirmation Dialog */}
+            <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Delete Task</DialogTitle>
+                        <DialogDescription>
+                            Are you sure you want to delete "{selectedTask?.title}"? This action cannot be undone.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => setShowDeleteDialog(false)}
+                            disabled={deleteLoading}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            onClick={confirmDeleteTask}
+                            disabled={deleteLoading}
+                        >
+                            {deleteLoading ? 'Deleting...' : 'Delete Task'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     )
 }

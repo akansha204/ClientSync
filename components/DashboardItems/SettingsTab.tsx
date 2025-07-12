@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { StatsCard } from '@/components/ui/stats-card'
 import useSupabaseSession from '@/hooks/useSupabaseSession'
 import { DashboardService } from '@/lib/dashboardService'
+import { toast } from 'sonner'
 
 interface UserProfile {
     id: string;
@@ -120,13 +121,13 @@ export default function SettingsTab() {
 
         // Check file type
         if (!file.type.startsWith('image/')) {
-            alert('Please select an image file')
+            toast.error('Please select an image file')
             return
         }
 
         // Check file size (max 5MB)
         if (file.size > 5 * 1024 * 1024) {
-            alert('File size must be less than 5MB')
+            toast.error('File size must be less than 5MB')
             return
         }
 
@@ -140,13 +141,13 @@ export default function SettingsTab() {
                     ...profile,
                     avatar_url: avatarUrl
                 })
-                alert('Avatar uploaded successfully!')
+                toast.success('Avatar uploaded successfully!')
             } else {
-                alert('Failed to upload avatar. Please try again.')
+                toast.error('Failed to upload avatar. Please try again.')
             }
         } catch (error) {
             console.error('Error uploading avatar:', error)
-            alert('Error uploading avatar. Please try again.')
+            toast.error('Error uploading avatar. Please try again.')
         } finally {
             setAvatarUploading(false)
         }
@@ -164,10 +165,10 @@ export default function SettingsTab() {
                 bio: profile.bio,
                 avatar_url: profile.avatar_url
             })
-            alert('Profile updated successfully!')
+            toast.success('Profile updated successfully!')
         } catch (error) {
             console.error('Error updating profile:', error)
-            alert('Error updating profile. Please try again.')
+            toast.error('Error updating profile. Please try again.')
         } finally {
             setSaving(false)
         }
@@ -177,12 +178,12 @@ export default function SettingsTab() {
         if (!session?.user?.id) return
 
         if (passwords.newPassword !== passwords.confirmPassword) {
-            alert('Passwords do not match')
+            toast.error('Passwords do not match')
             return
         }
 
         if (passwords.newPassword.length < 6) {
-            alert('Password must be at least 6 characters long')
+            toast.error('Password must be at least 6 characters long')
             return
         }
 
@@ -195,13 +196,13 @@ export default function SettingsTab() {
                     newPassword: '',
                     confirmPassword: ''
                 })
-                alert('Password updated successfully!')
+                toast.success('Password updated successfully!')
             } else {
-                alert('Error updating password. Please try again.')
+                toast.error('Error updating password. Please try again.')
             }
         } catch (error) {
             console.error('Error updating password:', error)
-            alert('Error updating password. Please try again.')
+            toast.error('Error updating password. Please try again.')
         } finally {
             setSaving(false)
         }
@@ -213,14 +214,14 @@ export default function SettingsTab() {
         try {
             const success = await DashboardService.deleteUserAccount(session.user.id)
             if (success) {
-                alert('Account deleted successfully. You will be redirected to the login page.')
+                toast.success('Account deleted successfully. You will be redirected to the login page.')
                 // The user will be redirected by the auth state change
             } else {
-                alert('Error deleting account. Please try again.')
+                toast.error('Error deleting account. Please try again.')
             }
         } catch (error) {
             console.error('Error deleting account:', error)
-            alert('Error deleting account. Please try again.')
+            toast.error('Error deleting account. Please try again.')
         }
         setIsDeleteAccountOpen(false)
     }
@@ -232,13 +233,13 @@ export default function SettingsTab() {
             const success = await DashboardService.clearCompletedTasks(session.user.id)
             if (success) {
                 await loadAccountStats() // Refresh stats
-                alert('Completed tasks cleared successfully!')
+                toast.success('Completed tasks cleared successfully!')
             } else {
-                alert('Error clearing completed tasks. Please try again.')
+                toast.error('Error clearing completed tasks. Please try again.')
             }
         } catch (error) {
             console.error('Error clearing completed tasks:', error)
-            alert('Error clearing completed tasks. Please try again.')
+            toast.error('Error clearing completed tasks. Please try again.')
         }
         setIsClearTasksOpen(false)
     }
@@ -250,13 +251,13 @@ export default function SettingsTab() {
             const result = await DashboardService.triggerCleanup(session.user.id)
             if (result.success) {
                 await loadAccountStats() // Refresh stats
-                alert(`${result.message} (${result.deletedCount} clients removed)`)
+                toast.success(`${result.message} (${result.deletedCount} clients removed)`)
             } else {
-                alert('Error cleaning up inactive clients. Please try again.')
+                toast.error('Error cleaning up inactive clients. Please try again.')
             }
         } catch (error) {
             console.error('Error cleaning up inactive clients:', error)
-            alert('Error cleaning up inactive clients. Please try again.')
+            toast.error('Error cleaning up inactive clients. Please try again.')
         }
         setIsCleanupClientsOpen(false)
     }
@@ -576,7 +577,7 @@ export default function SettingsTab() {
                                                 <DialogHeader>
                                                     <DialogTitle>Cleanup Inactive Clients</DialogTitle>
                                                     <DialogDescription>
-                                                        This will remove clients that have been inactive for more than 30 days along with their associated tasks. This action cannot be undone.
+                                                        This will remove all clients marked as inactive along with their associated tasks. This action cannot be undone.
                                                     </DialogDescription>
                                                 </DialogHeader>
                                                 <div className="flex justify-end gap-2">

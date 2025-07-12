@@ -822,17 +822,12 @@ export class DashboardService {
     // Manually trigger cleanup of inactive clients (can be called from admin interface)
     static async triggerCleanup(userId: string): Promise<{ success: boolean; message: string; deletedCount: number }> {
         try {
-            const thirtyDaysAgo = new Date();
-            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-            const cutoffDate = thirtyDaysAgo.toISOString();
-
-            // Find inactive clients older than 30 days
+            // Find ALL inactive clients (regardless of age)
             const { data: inactiveClients, error: clientsError } = await supabase
                 .from('clients')
                 .select('id, name')
                 .eq('user_id', userId)
-                .eq('status', 'inactive')
-                .lt('updated_at', cutoffDate);
+                .eq('status', 'inactive');
 
             if (clientsError) {
                 return { success: false, message: 'Error fetching inactive clients', deletedCount: 0 };
@@ -842,7 +837,29 @@ export class DashboardService {
                 return { success: true, message: 'No inactive clients found for cleanup', deletedCount: 0 };
             }
 
-            await this.cleanupInactiveClients(userId);
+            const clientIds = inactiveClients.map(c => c.id);
+
+            // Delete tasks related to these clients first (due to foreign key constraints)
+            const { error: tasksError } = await supabase
+                .from('tasks')
+                .delete()
+                .in('client_id', clientIds);
+
+            if (tasksError) {
+                console.error('Error deleting tasks for inactive clients:', tasksError);
+                return { success: false, message: 'Error deleting related tasks', deletedCount: 0 };
+            }
+
+            // Delete the inactive clients
+            const { error: deleteError } = await supabase
+                .from('clients')
+                .delete()
+                .in('id', clientIds);
+
+            if (deleteError) {
+                console.error('Error deleting inactive clients:', deleteError);
+                return { success: false, message: 'Error deleting inactive clients', deletedCount: 0 };
+            }
 
             return {
                 success: true,
@@ -850,8 +867,8 @@ export class DashboardService {
                 deletedCount: inactiveClients.length
             };
         } catch (error) {
-            console.error('Error triggering cleanup:', error);
-            return { success: false, message: 'Error during cleanup process', deletedCount: 0 };
+            console.error('Error in triggerCleanup:', error);
+            return { success: false, message: 'Unexpected error during cleanup', deletedCount: 0 };
         }
     }
 }

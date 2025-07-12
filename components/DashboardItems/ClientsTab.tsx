@@ -38,9 +38,20 @@ export default function ClientsTab() {
             setLoading(true)
             const userId = session?.user?.id
             if (userId) {
-                // Fetch from the database
-                const clientsData = await DashboardService.getRecentClients(50, userId)
+                // Fetch all clients from the database to ensure UI is always up-to-date
+                const clientsData = await DashboardService.getAllClients(userId)
                 setClients(clientsData)
+
+                // If we're viewing a specific client, update the selected client data
+                if (selectedClient) {
+                    const updatedSelectedClient = clientsData.find(c => c.id === selectedClient.id)
+                    if (updatedSelectedClient) {
+                        setSelectedClient(updatedSelectedClient)
+                    } else {
+                        // Client was deleted, go back to list
+                        handleBackToList()
+                    }
+                }
             } else {
                 // No session, show empty state
                 setClients([])

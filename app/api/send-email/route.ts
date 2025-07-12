@@ -70,6 +70,21 @@ export async function POST(req: NextRequest) {
         // Send email
         const fromEmail = process.env.FROM_EMAIL || 'onboarding@resend.dev'; // Use Resend's test domain as fallback
 
+        // In development/testing mode, check if we can send to the recipient
+        const isDevelopment = process.env.NODE_ENV === 'development';
+        const isTestingMode = fromEmail === 'onboarding@resend.dev';
+        const userEmail = user.email;
+
+        if (isDevelopment && isTestingMode && to !== userEmail) {
+            return NextResponse.json(
+                {
+                    error: `Testing mode: Can only send emails to your own email address (${userEmail}). To send to other recipients, please verify a domain at resend.com/domains.`,
+                    suggestion: "For testing, try sending the email to your own email address instead."
+                },
+                { status: 403 }
+            );
+        }
+
         const { data, error } = await resend.emails.send({
             from: fromEmail,
             to: to,
@@ -81,8 +96,24 @@ export async function POST(req: NextRequest) {
 
         if (error) {
             console.error('Resend API error:', error);
+
+            // Check for specific Resend error types
+            if (error.message && error.message.includes('testing emails')) {
+                return NextResponse.json(
+                    { error: "Email service is in testing mode. You can only send emails to your own verified email address. Please verify your domain at resend.com/domains to send to all recipients." },
+                    { status: 403 }
+                );
+            }
+
+            if (error.message && error.message.includes('domain')) {
+                return NextResponse.json(
+                    { error: "Email domain not verified. Please verify your domain at resend.com/domains." },
+                    { status: 403 }
+                );
+            }
+
             return NextResponse.json(
-                { error: "Failed to send email" },
+                { error: error.message || "Failed to send email" },
                 { status: 500 }
             );
         }
