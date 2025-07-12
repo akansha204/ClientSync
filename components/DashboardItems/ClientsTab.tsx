@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { DashboardService } from '@/lib/dashboardService'
 import { Client } from '@/lib/types'
@@ -16,90 +17,6 @@ import AddClientDialog from '@/components/AddClientDialog'
 import AddTaskDialog from '@/components/AddTaskDialog'
 import GenerateEmailDialog from '@/components/GenerateEmailDialog'
 
-// Dummy data for demonstration
-const dummyClients = [
-    {
-        id: '1',
-        name: 'Sarah Johnson',
-        email: 'sarah.johnson@example.com',
-        company: 'Tech Solutions Inc.',
-        phone: '+1 (555) 123-4567',
-        notes: 'Initial consultation completed',
-        user_id: 'user1',
-        created_at: '2024-06-15T10:00:00Z',
-        updated_at: '2024-06-20T14:30:00Z'
-    },
-    {
-        id: '2',
-        name: 'Michael Chen',
-        email: 'michael.chen@startup.com',
-        company: 'StartupXYZ',
-        phone: '+1 (555) 987-6543',
-        notes: 'Looking for web development services',
-        user_id: 'user1',
-        created_at: '2024-06-18T09:15:00Z',
-        updated_at: '2024-06-22T11:45:00Z'
-    },
-    {
-        id: '3',
-        name: 'Emily Rodriguez',
-        email: 'emily.r@consulting.com',
-        company: 'Rodriguez Consulting',
-        phone: '+1 (555) 456-7890',
-        notes: 'Requires mobile app development',
-        user_id: 'user1',
-        created_at: '2024-06-20T16:20:00Z',
-        updated_at: '2024-06-25T13:10:00Z'
-    },
-    {
-        id: '4',
-        name: 'David Thompson',
-        email: 'david@retailstore.com',
-        company: 'Thompson Retail',
-        phone: '+1 (555) 234-5678',
-        notes: 'E-commerce platform needed',
-        user_id: 'user1',
-        created_at: '2024-06-22T11:30:00Z',
-        updated_at: '2024-06-27T09:00:00Z'
-    },
-    {
-        id: '5',
-        name: 'Lisa Park',
-        email: 'lisa.park@nonprofit.org',
-        company: 'Community Nonprofit',
-        phone: '+1 (555) 345-6789',
-        notes: 'Website redesign project',
-        user_id: 'user1',
-        created_at: '2024-06-25T14:45:00Z',
-        updated_at: '2024-06-30T16:20:00Z'
-    }
-]
-
-// Timeline data for client details
-const timelineData = [
-    {
-        id: '1',
-        type: 'meeting',
-        title: 'Initial Meeting',
-        date: 'June 15, 2024',
-        icon: Calendar
-    },
-    {
-        id: '2',
-        type: 'email',
-        title: 'Proposal Sent',
-        date: 'June 20, 2024',
-        icon: Mail
-    },
-    {
-        id: '3',
-        type: 'contract',
-        title: 'Contract Signed',
-        date: 'June 25, 2024',
-        icon: FileText
-    }
-]
-
 export default function ClientsTab() {
     const session = useSupabaseSession()
     const [clients, setClients] = useState<Client[]>([])
@@ -107,29 +24,31 @@ export default function ClientsTab() {
     const [loading, setLoading] = useState(true)
     const [selectedClient, setSelectedClient] = useState<Client | null>(null)
     const [showClientDetails, setShowClientDetails] = useState(false)
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+    const [clientToDelete, setClientToDelete] = useState<Client | null>(null)
+    const [preSelectedClientId, setPreSelectedClientId] = useState<string | undefined>(undefined)
+    const [clientToEdit, setClientToEdit] = useState<Client | null>(null)
+
+    // Refs for dialog triggers
+    const editClientTriggerRef = React.useRef<HTMLButtonElement>(null)
+    const addTaskTriggerRef = React.useRef<HTMLButtonElement>(null)
 
     const fetchClients = async () => {
         try {
             setLoading(true)
             const userId = session?.user?.id
             if (userId) {
-                // In production, this would fetch from the database
+                // Fetch from the database
                 const clientsData = await DashboardService.getRecentClients(50, userId)
-
-                // For demo purposes, use dummy data if no real data
-                if (clientsData.length === 0) {
-                    setClients(dummyClients)
-                } else {
-                    setClients(clientsData)
-                }
+                setClients(clientsData)
             } else {
-                // Use dummy data when not authenticated (for demo)
-                setClients(dummyClients)
+                // No session, show empty state
+                setClients([])
             }
         } catch (error) {
             console.error('Error fetching clients:', error)
-            // Fallback to dummy data
-            setClients(dummyClients)
+            // Show empty state on error
+            setClients([])
         } finally {
             setLoading(false)
         }
@@ -167,6 +86,42 @@ export default function ClientsTab() {
         setSelectedClient(null)
     }
 
+    const handleEditClient = (client: Client) => {
+        setClientToEdit(client)
+        editClientTriggerRef.current?.click()
+    }
+
+    const handleAddTask = (client: Client) => {
+        setPreSelectedClientId(client.id)
+        // Small delay to ensure the state is updated before opening the dialog
+        setTimeout(() => {
+            addTaskTriggerRef.current?.click()
+        }, 10)
+    }
+
+    const handleDeleteClient = (client: Client) => {
+        setClientToDelete(client)
+        setIsDeleteDialogOpen(true)
+    }
+
+    const confirmDeleteClient = async () => {
+        if (!clientToDelete || !session?.user?.id) return
+
+        try {
+            await DashboardService.deleteClient(clientToDelete.id, session.user.id)
+            setClients(clients.filter(c => c.id !== clientToDelete.id))
+            setIsDeleteDialogOpen(false)
+            setClientToDelete(null)
+
+            // If we're viewing details of the deleted client, go back to list
+            if (selectedClient?.id === clientToDelete.id) {
+                handleBackToList()
+            }
+        } catch (error) {
+            console.error('Error deleting client:', error)
+        }
+    }
+
     if (showClientDetails && selectedClient) {
         return (
             <div className="space-y-6 p-6">
@@ -186,9 +141,9 @@ export default function ClientsTab() {
                     </div>
                 </div>
 
-                <div className="grid gap-6 md:grid-cols-3">
+                <div className="grid gap-6">
                     {/* Contact Information */}
-                    <Card className="md:col-span-2">
+                    <Card>
                         <CardHeader>
                             <CardTitle>Contact Information</CardTitle>
                         </CardHeader>
@@ -217,39 +172,14 @@ export default function ClientsTab() {
                                     <p className="font-medium">{selectedClient.notes}</p>
                                 </div>
                             )}
-                        </CardContent>
-                    </Card>
 
-                    {/* Timeline */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Timeline</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="space-y-4">
-                                {timelineData.map((item, index) => (
-                                    <div key={item.id} className="flex items-start space-x-3">
-                                        <div className="flex-shrink-0">
-                                            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                                                <item.icon className="h-4 w-4 text-primary" />
-                                            </div>
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <p className="text-sm font-medium">{item.title}</p>
-                                            <p className="text-xs text-muted-foreground">{item.date}</p>
-                                        </div>
-                                        {index < timelineData.length - 1 && (
-                                            <div className="absolute left-[47px] mt-8 w-px h-6 bg-border" />
-                                        )}
-                                    </div>
-                                ))}
-                            </div>
-                            <div className="mt-6 space-y-2">
+                            {/* Action Buttons */}
+                            <div className="flex gap-4 pt-4">
                                 <AddTaskDialog
                                     preSelectedClientId={selectedClient.id}
                                     onTaskAdded={fetchClients}
                                     trigger={
-                                        <Button className="w-full" size="sm">
+                                        <Button size="sm">
                                             Add Task
                                         </Button>
                                     }
@@ -258,6 +188,11 @@ export default function ClientsTab() {
                                     clientName={selectedClient.name}
                                     clientEmail={selectedClient.email}
                                     clientCompany={selectedClient.company || ''}
+                                    trigger={
+                                        <Button variant="outline" size="sm">
+                                            Generate Follow-up Email
+                                        </Button>
+                                    }
                                 />
                             </div>
                         </CardContent>
@@ -396,15 +331,24 @@ export default function ClientsTab() {
                                                     }}>
                                                         View Details
                                                     </DropdownMenuItem>
-                                                    <DropdownMenuItem onClick={(e) => e.stopPropagation()}>
+                                                    <DropdownMenuItem onClick={(e) => {
+                                                        e.stopPropagation()
+                                                        handleEditClient(client)
+                                                    }}>
                                                         Edit Client
                                                     </DropdownMenuItem>
-                                                    <DropdownMenuItem onClick={(e) => e.stopPropagation()}>
+                                                    <DropdownMenuItem onClick={(e) => {
+                                                        e.stopPropagation()
+                                                        handleAddTask(client)
+                                                    }}>
                                                         Add Task
                                                     </DropdownMenuItem>
                                                     <DropdownMenuItem
                                                         className="text-destructive"
-                                                        onClick={(e) => e.stopPropagation()}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation()
+                                                            handleDeleteClient(client)
+                                                        }}
                                                     >
                                                         Delete Client
                                                     </DropdownMenuItem>
@@ -438,6 +382,53 @@ export default function ClientsTab() {
                     )}
                 </CardContent>
             </Card>
+
+            {/* Delete Client Confirmation Dialog */}
+            <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Delete Client</DialogTitle>
+                        <DialogDescription>
+                            Are you sure you want to delete "{clientToDelete?.name}"? This will permanently remove the client and all associated tasks. This action cannot be undone.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="flex justify-end gap-2">
+                        <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+                            Cancel
+                        </Button>
+                        <Button variant="destructive" onClick={confirmDeleteClient}>
+                            Delete Client
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Hidden triggers for dialogs */}
+            <AddClientDialog
+                onClientAdded={fetchClients}
+                editClient={clientToEdit}
+                trigger={
+                    <Button
+                        ref={editClientTriggerRef}
+                        style={{ display: 'none' }}
+                    >
+                        Edit Client
+                    </Button>
+                }
+            />
+
+            <AddTaskDialog
+                onTaskAdded={fetchClients}
+                preSelectedClientId={preSelectedClientId}
+                trigger={
+                    <Button
+                        ref={addTaskTriggerRef}
+                        style={{ display: 'none' }}
+                    >
+                        Add Task
+                    </Button>
+                }
+            />
         </div>
     )
 }

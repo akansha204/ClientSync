@@ -8,6 +8,8 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
+import axios from 'axios'
+import useSupabaseSession from '@/hooks/useSupabaseSession'
 
 interface GenerateEmailDialogProps {
     clientName?: string
@@ -33,6 +35,7 @@ export default function GenerateEmailDialog({
     trigger,
     className
 }: GenerateEmailDialogProps) {
+    const session = useSupabaseSession()
     const [isOpen, setIsOpen] = useState(false)
     const [loading, setLoading] = useState(false)
     const [emailType, setEmailType] = useState('')
@@ -45,93 +48,101 @@ export default function GenerateEmailDialog({
         setLoading(true)
         setStep('generate')
 
-        // Simulate AI generation delay
-        setTimeout(() => {
-            const selectedType = emailType === 'other' ? customType : emailTypes.find(t => t.value === emailType)?.label || 'default'
+        try {
+            const selectedType = emailType === 'other' ? customType : emailTypes.find(t => t.value === emailType)?.label || 'Follow-up Email'
 
-            // Mock generated email based on type
-            const mockEmail = generateMockEmail(selectedType, clientName, clientCompany)
-            setGeneratedEmail(mockEmail)
+            const response = await axios.post('/api/generate-email', {
+                clientName,
+                clientEmail,
+                clientCompany,
+                emailType: selectedType,
+                customType: emailType === 'other' ? customType : undefined
+            })
+
+            setGeneratedEmail(response.data.email)
             setStep('preview')
+        } catch (error) {
+            console.error('Error generating email:', error)
+
+            let errorMessage = 'Failed to generate email. Please try again.'
+
+            if (axios.isAxiosError(error)) {
+                if (error.response?.status === 500 && error.response?.data?.error?.includes('API key')) {
+                    errorMessage = 'AI service not configured. Please contact administrator.'
+                } else if (error.response?.status === 400) {
+                    errorMessage = 'Invalid request. Please check your input.'
+                }
+            }
+
+            alert(errorMessage)
+            setStep('select')
+        } finally {
             setLoading(false)
-        }, 2000)
-    }
-
-    const generateMockEmail = (type: string, name: string, company: string) => {
-        const templates: { [key: string]: string } = {
-            'Follow-up Email': `Subject: Following up on our recent conversation
-
-Hi ${name},
-
-I hope this email finds you well. I wanted to follow up on our recent conversation regarding ${company}'s needs.
-
-I've been thinking about the points we discussed, and I believe we can provide exactly what you're looking for. Would you be available for a brief call this week to discuss the next steps?
-
-Looking forward to hearing from you.
-
-Best regards,
-[Your Name]`,
-
-            'Check-in Email': `Subject: Checking in - How are things going?
-
-Hi ${name},
-
-I hope you're doing well! I wanted to reach out and see how things are progressing with ${company}.
-
-Is there anything I can help you with or any questions you might have? I'm always here to support you and ensure everything is running smoothly.
-
-Let me know if you'd like to schedule a quick catch-up call.
-
-Best regards,
-[Your Name]`,
-
-            'Proposal Follow-up': `Subject: Following up on our proposal for ${company}
-
-Hi ${name},
-
-I hope you're well. I wanted to follow up on the proposal we sent over for ${company} last week.
-
-Have you had a chance to review it? I'd be happy to answer any questions or discuss any aspects in more detail.
-
-Would you be available for a brief call to go over the proposal together?
-
-Best regards,
-[Your Name]`,
-
-            'default': `Subject: Following up with ${company}
-
-Hi ${name},
-
-I hope this email finds you well. I wanted to reach out regarding ${company} and see how I can best support your current needs.
-
-Please let me know if you have any questions or if there's anything specific you'd like to discuss.
-
-Looking forward to connecting soon.
-
-Best regards,
-[Your Name]`
         }
-
-        return templates[type] || templates['default']
     }
 
     const handleSendEmail = async () => {
         setLoading(true)
 
-        // Simulate sending email
-        setTimeout(() => {
-            setLoading(false)
-            setIsOpen(false)
-            // Reset state
-            setStep('select')
-            setEmailType('')
-            setCustomType('')
-            setGeneratedEmail('')
-            setIsEditing(false)
+        try {
+            // Check if user is authenticated
+            if (!session?.access_token) {
+                alert('You must be logged in to send emails.')
+                return
+            }
 
-            // Show success message (you can replace this with a toast)
-            alert('Email sent successfully!')
-        }, 1500)
+            // Extract subject from the generated email
+            const emailLines = generatedEmail.split('\n')
+            const subjectLine = emailLines.find(line => line.startsWith('Subject:'))
+            const subject = subjectLine ? subjectLine.replace('Subject: ', '').trim() : 'Follow-up Email'
+
+            // Remove subject line from content
+            const content = generatedEmail.replace(/^Subject:.*\n\n?/, '').trim()
+
+            const response = await axios.post('/api/send-email', {
+                to: clientEmail,
+                subject: subject,
+                content: content,
+                clientName: clientName
+            }, {
+                headers: {
+                    'Authorization': `Bearer ${session.access_token}`
+                }
+            })
+
+            if (response.data.success) {
+                alert(`Email sent successfully to ${clientName} from ${session.user?.email}!`)
+                setIsOpen(false)
+                // Reset state
+                setStep('select')
+                setEmailType('')
+                setCustomType('')
+                setGeneratedEmail('')
+                setIsEditing(false)
+            } else {
+                alert('Failed to send email. Please try again.')
+            }
+        } catch (error) {
+            console.error('Error sending email:', error)
+
+            let errorMessage = 'Failed to send email. Please try again.'
+
+            if (axios.isAxiosError(error)) {
+                if (error.response?.status === 401) {
+                    errorMessage = 'Authentication failed. Please log in again.'
+                } else if (error.response?.status === 500 && error.response?.data?.error?.includes('API key')) {
+                    errorMessage = 'Email service not configured. Please contact administrator.'
+                } else if (error.response?.status === 400) {
+                    errorMessage = 'Invalid email data. Please check the email content.'
+                } else if (error.response?.data?.error) {
+                    errorMessage = error.response.data.error
+                }
+            }
+
+            alert(errorMessage)
+        } finally {
+            setLoading(false)
+        }
     }
 
     const resetDialog = () => {
@@ -206,9 +217,9 @@ Best regards,
                             <CardContent className="pt-4">
                                 <div className="text-sm text-muted-foreground mb-2">Email will be generated for:</div>
                                 <div className="space-y-1">
-                                    <div><strong>Name:</strong> {clientName}</div>
-                                    <div><strong>Email:</strong> {clientEmail}</div>
+                                    <div><strong>To:</strong> {clientName} ({clientEmail})</div>
                                     <div><strong>Company:</strong> {clientCompany}</div>
+                                    <div><strong>From:</strong> {session?.user?.email || 'Your account'}</div>
                                 </div>
                             </CardContent>
                         </Card>
@@ -280,9 +291,9 @@ Best regards,
                                 Back
                             </Button>
                             <div className="space-x-2">
-                                <Button variant="outline" onClick={() => setIsOpen(false)}>
+                                {/* <Button variant="outline" onClick={() => setIsOpen(false)}>
                                     Save Draft
-                                </Button>
+                                </Button> */}
                                 <Button onClick={handleSendEmail} disabled={loading}>
                                     {loading ? (
                                         <>

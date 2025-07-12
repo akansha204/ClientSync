@@ -8,15 +8,17 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { DashboardService } from '@/lib/dashboardService'
+import { Client } from '@/lib/types'
 import useSupabaseSession from '@/hooks/useSupabaseSession'
 
 interface AddClientDialogProps {
     onClientAdded?: () => void
     trigger?: React.ReactNode
     className?: string
+    editClient?: Client | null
 }
 
-export default function AddClientDialog({ onClientAdded, trigger, className }: AddClientDialogProps) {
+export default function AddClientDialog({ onClientAdded, trigger, className, editClient }: AddClientDialogProps) {
     const session = useSupabaseSession()
     const [isOpen, setIsOpen] = useState(false)
     const [loading, setLoading] = useState(false)
@@ -28,6 +30,32 @@ export default function AddClientDialog({ onClientAdded, trigger, className }: A
         notes: '',
         status: 'active' as 'active' | 'inactive'
     })
+
+    // Update form data when editClient changes
+    React.useEffect(() => {
+        if (editClient) {
+            setFormData({
+                name: editClient.name || '',
+                email: editClient.email || '',
+                company: editClient.company || '',
+                phone: editClient.phone || '',
+                notes: editClient.notes || '',
+                status: editClient.status || 'active'
+            })
+        } else {
+            // Reset form for new client
+            setFormData({
+                name: '',
+                email: '',
+                company: '',
+                phone: '',
+                notes: '',
+                status: 'active'
+            })
+        }
+    }, [editClient])
+
+    const isEditing = !!editClient
 
     const handleInputChange = (field: string, value: string) => {
         setFormData(prev => ({
@@ -51,11 +79,19 @@ export default function AddClientDialog({ onClientAdded, trigger, className }: A
                 return
             }
 
-            // Call the dashboard service to create the client
-            await DashboardService.createClient({
-                ...formData,
-                userId
-            })
+            if (isEditing && editClient) {
+                // Update existing client
+                await DashboardService.updateClient(editClient.id, {
+                    ...formData,
+                    updated_at: new Date().toISOString()
+                }, userId)
+            } else {
+                // Create new client
+                await DashboardService.createClient({
+                    ...formData,
+                    userId
+                })
+            }
 
             // Reset form
             setFormData({
@@ -74,8 +110,8 @@ export default function AddClientDialog({ onClientAdded, trigger, className }: A
                 onClientAdded()
             }
         } catch (error) {
-            console.error('Error creating client:', error)
-            alert('Failed to create client. Please try again.')
+            console.error(`Error ${isEditing ? 'updating' : 'creating'} client:`, error)
+            alert(`Failed to ${isEditing ? 'update' : 'create'} client. Please try again.`)
         } finally {
             setLoading(false)
         }
@@ -95,9 +131,9 @@ export default function AddClientDialog({ onClientAdded, trigger, className }: A
             </DialogTrigger>
             <DialogContent className="sm:max-w-[425px]">
                 <DialogHeader>
-                    <DialogTitle>Add New Client</DialogTitle>
+                    <DialogTitle>{isEditing ? 'Edit Client' : 'Add New Client'}</DialogTitle>
                     <DialogDescription>
-                        Add a new client to your database.
+                        {isEditing ? 'Edit the client information.' : 'Add a new client to your database.'}
                     </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
@@ -181,7 +217,7 @@ export default function AddClientDialog({ onClientAdded, trigger, className }: A
                         onClick={handleSubmit}
                         disabled={loading || !formData.name || !formData.email || !formData.company}
                     >
-                        {loading ? 'Adding...' : 'Add Client'}
+                        {loading ? (isEditing ? 'Updating...' : 'Adding...') : (isEditing ? 'Update Client' : 'Add Client')}
                     </Button>
                 </div>
             </DialogContent>

@@ -212,7 +212,7 @@ export default function DashboardTab() {
                 </div>
 
                 {/* Recent Follow-ups */}
-                <div className="bg-card text-card-foreground rounded-lg border p-6 shadow-sm">
+                {/* <div className="bg-card text-card-foreground rounded-lg border p-6 shadow-sm">
                     <div className="flex items-center justify-between mb-4">
                         <h3 className="text-lg font-semibold">Upcoming Follow-ups</h3>
                         <Calendar className="h-5 w-5 text-muted-foreground" />
@@ -254,23 +254,23 @@ export default function DashboardTab() {
                             <p className="text-muted-foreground text-center py-4">No upcoming follow-ups</p>
                         )}
                     </div>
-                </div>
+                </div> */}
             </div>
 
             {/* Quick Actions */}
-            <div className="bg-card text-card-foreground rounded-lg border p-6 shadow-sm">
+            <div className="bg-card text-card-foreground rounded-lg border p-6 shadow-sm min-w-full">
                 <h3 className="text-lg font-semibold mb-4">Quick Actions</h3>
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-2">
                     <AddClientDialog onClientAdded={fetchDashboardData} />
                     <AddTaskDialog onTaskAdded={fetchDashboardData} />
-                    <Button className="h-auto p-4 flex-col gap-2" variant="outline">
+                    {/* <Button className="h-auto p-4 flex-col gap-2" variant="outline">
                         <Calendar className="h-6 w-6" />
                         <span>Schedule Follow-up</span>
                     </Button>
                     <Button className="h-auto p-4 flex-col gap-2" variant="outline">
                         <TrendingUp className="h-6 w-6" />
                         <span>View Reports</span>
-                    </Button>
+                    </Button> */}
                 </div>
             </div>
         </div>

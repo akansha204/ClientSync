@@ -13,110 +13,6 @@ import useSupabaseSession from '@/hooks/useSupabaseSession'
 import AddTaskDialog from '@/components/AddTaskDialog'
 import AddClientDialog from '@/components/AddClientDialog'
 
-// Dummy data for demonstration
-const dummyTasks: Task[] = [
-    {
-        id: '1',
-        title: 'Design Landing Page',
-        description: 'Create a modern landing page design for the client',
-        status: 'in_progress',
-        due_date: '2025-03-15',
-        client_id: '1',
-        user_id: 'user1',
-        created_at: '2025-03-10T10:00:00Z',
-        updated_at: '2025-03-10T10:00:00Z',
-        clients: {
-            id: '1',
-            name: 'Tech Solutions Inc.',
-            email: 'contact@techsolutions.com',
-            company: 'Tech Solutions Inc.',
-            user_id: 'user1',
-            created_at: '2025-03-01T10:00:00Z',
-            updated_at: '2025-03-01T10:00:00Z'
-        }
-    },
-    {
-        id: '2',
-        title: 'Develop API Integration',
-        description: 'Integrate third-party API for payment processing',
-        status: 'todo',
-        due_date: '2025-03-18',
-        client_id: '2',
-        user_id: 'user1',
-        created_at: '2025-03-10T11:00:00Z',
-        updated_at: '2025-03-10T11:00:00Z',
-        clients: {
-            id: '2',
-            name: 'Global Retail Group',
-            email: 'contact@globalretail.com',
-            company: 'Global Retail Group',
-            user_id: 'user1',
-            created_at: '2025-03-02T10:00:00Z',
-            updated_at: '2025-03-02T10:00:00Z'
-        }
-    },
-    {
-        id: '3',
-        title: 'Prepare Monthly Report',
-        description: 'Compile monthly performance report with analytics',
-        status: 'completed',
-        due_date: '2025-03-12',
-        client_id: '3',
-        user_id: 'user1',
-        created_at: '2025-03-09T10:00:00Z',
-        updated_at: '2025-03-12T15:00:00Z',
-        clients: {
-            id: '3',
-            name: 'Innovative Startups LLC',
-            email: 'contact@innovativestartups.com',
-            company: 'Innovative Startups LLC',
-            user_id: 'user1',
-            created_at: '2025-03-03T10:00:00Z',
-            updated_at: '2025-03-03T10:00:00Z'
-        }
-    },
-    {
-        id: '4',
-        title: 'Client Onboarding',
-        description: 'Complete onboarding process for new client',
-        status: 'todo',
-        due_date: '2025-03-14',
-        client_id: '4',
-        user_id: 'user1',
-        created_at: '2025-03-08T10:00:00Z',
-        updated_at: '2025-03-08T10:00:00Z',
-        clients: {
-            id: '4',
-            name: 'Dynamic Ventures Ltd.',
-            email: 'contact@dynamicventures.com',
-            company: 'Dynamic Ventures Ltd.',
-            user_id: 'user1',
-            created_at: '2025-03-04T10:00:00Z',
-            updated_at: '2025-03-04T10:00:00Z'
-        }
-    },
-    {
-        id: '5',
-        title: 'Review Project Proposal',
-        description: 'Review and finalize project proposal document',
-        status: 'in_progress',
-        due_date: '2025-03-16',
-        client_id: '5',
-        user_id: 'user1',
-        created_at: '2025-03-07T10:00:00Z',
-        updated_at: '2025-03-10T14:00:00Z',
-        clients: {
-            id: '5',
-            name: 'Creative Minds Agency',
-            email: 'contact@creativeminds.com',
-            company: 'Creative Minds Agency',
-            user_id: 'user1',
-            created_at: '2025-03-05T10:00:00Z',
-            updated_at: '2025-03-05T10:00:00Z'
-        }
-    }
-]
-
 export default function TasksTab() {
     const session = useSupabaseSession()
     const [tasks, setTasks] = useState<Task[]>([])
@@ -129,23 +25,14 @@ export default function TasksTab() {
             setLoading(true)
             const userId = session?.user?.id
             if (userId) {
-                // In production, this would fetch from the database
                 const tasksData = await DashboardService.getDueTasks(50, userId)
-
-                // For demo purposes, use dummy data if no real data
-                if (tasksData.length === 0) {
-                    setTasks(dummyTasks)
-                } else {
-                    setTasks(tasksData)
-                }
+                setTasks(tasksData)
             } else {
-                // Use dummy data when not authenticated (for demo)
-                setTasks(dummyTasks)
+                setTasks([])
             }
         } catch (error) {
             console.error('Error fetching tasks:', error)
-            // Fallback to dummy data
-            setTasks(dummyTasks)
+            setTasks([])
         } finally {
             setLoading(false)
         }
