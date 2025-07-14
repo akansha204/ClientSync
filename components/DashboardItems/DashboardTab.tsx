@@ -5,7 +5,7 @@ import { StatsCard } from '@/components/ui/stats-card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import { DashboardService } from '@/lib/dashboardService'
-import { DashboardStats, Client, Task, FollowUp } from '@/lib/types'
+import { DashboardStats, Client, Task } from '@/lib/types'
 import useSupabaseSession from '@/hooks/useSupabaseSession'
 import AddClientDialog from '@/components/AddClientDialog'
 import AddTaskDialog from '@/components/AddTaskDialog'
@@ -14,7 +14,6 @@ export default function DashboardTab() {
     const [stats, setStats] = useState<DashboardStats | null>(null)
     const [recentClients, setRecentClients] = useState<Client[]>([])
     const [dueTasks, setDueTasks] = useState<Task[]>([])
-    const [recentFollowUps, setRecentFollowUps] = useState<FollowUp[]>([])
     const [loading, setLoading] = useState(true)
     const [refreshing, setRefreshing] = useState(false)
 
@@ -23,17 +22,15 @@ export default function DashboardTab() {
             setRefreshing(true)
             const userId = session?.user?.id
 
-            const [statsData, clientsData, tasksData, followUpsData] = await Promise.all([
+            const [statsData, clientsData, tasksData] = await Promise.all([
                 DashboardService.getDashboardStats(userId),
-                DashboardService.getRecentClients(5, userId),
+                DashboardService.getRecentClients(3, userId),
                 DashboardService.getDueTasks(8, userId),
-                DashboardService.getRecentFollowUps(5, userId)
             ])
 
             setStats(statsData)
             setRecentClients(clientsData)
             setDueTasks(tasksData)
-            setRecentFollowUps(followUpsData)
         } catch (error) {
             console.error('Error fetching dashboard data:', error)
         } finally {
@@ -118,21 +115,21 @@ export default function DashboardTab() {
                 <StatsCard
                     title="Total Clients"
                     value={stats?.totalClients || 0}
-                    description={`${stats?.activeClients || 0} total clients`}
+                    description={`${stats?.activeClients || 0} Active clients`}
                     icon={<Users className="h-4 w-4" />}
                 />
                 <StatsCard
                     title="Overdue Tasks"
                     value={stats?.overdueTasks || 0}
-                    description={`${stats?.overdueTasks || 0} overdue`}
-                    icon={<CheckSquare className="h-4 w-4" />}
+                    description="Past due date"
+                    icon={<AlertTriangle className="h-4 w-4" />}
                 />
-                {/* <StatsCard
-                    title="Upcoming Follow-ups"
-                    value={stats?.upcomingFollowUps || 0}
-                    description="Next 30 days"
-                    icon={<Calendar className="h-4 w-4" />}
-                /> */}
+                <StatsCard
+                    title="Due Tasks"
+                    value={stats?.pendingTasks || 0}
+                    description="Due today/overdue"
+                    icon={<Clock className="h-4 w-4" />}
+                />
                 <StatsCard
                     title="Completed This Week"
                     value={stats?.completedTasksThisWeek || 0}
@@ -142,7 +139,7 @@ export default function DashboardTab() {
             </div>
 
             {/* Main Content Grid */}
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
                 {/* Recent Clients */}
                 <div className="bg-card text-card-foreground rounded-lg border p-6 shadow-sm">
                     <div className="flex items-center justify-between mb-4">
@@ -174,16 +171,19 @@ export default function DashboardTab() {
                 {/* Due Tasks */}
                 <div className="bg-card text-card-foreground rounded-lg border p-6 shadow-sm">
                     <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-lg font-semibold">Pending Tasks</h3>
+                        <h3 className="text-lg font-semibold">Recent Pending Tasks</h3>
                         <CheckSquare className="h-5 w-5 text-muted-foreground" />
                     </div>
-                    <div className="space-y-3 max-h-80 overflow-y-auto">
+                    <div className="space-y-3">
                         {dueTasks.length > 0 ? (
-                            dueTasks.map((task) => (
+                            dueTasks.slice(0, 3).map((task) => (
                                 <div key={task.id} className="p-3 bg-background rounded-md">
                                     <div className="flex items-start justify-between">
                                         <div className="flex-1">
                                             <p className="font-medium">{task.title}</p>
+                                            {task.description && (
+                                                <p className="text-sm text-muted-foreground mt-1">{task.description}</p>
+                                            )}
                                             <p className="text-sm text-muted-foreground">{task.clients?.name}</p>
                                             <div className="flex items-center gap-2 mt-2">
                                                 <span className={`px-2 py-1 rounded-full text-xs ${getTaskStatusColor(task.status)}`}>
@@ -210,51 +210,6 @@ export default function DashboardTab() {
                         )}
                     </div>
                 </div>
-
-                {/* Recent Follow-ups */}
-                {/* <div className="bg-card text-card-foreground rounded-lg border p-6 shadow-sm">
-                    <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-lg font-semibold">Upcoming Follow-ups</h3>
-                        <Calendar className="h-5 w-5 text-muted-foreground" />
-                    </div>
-                    <div className="space-y-3">
-                        {recentFollowUps.length > 0 ? (
-                            recentFollowUps.map((followUp) => (
-                                <div key={followUp.id} className="p-3 bg-background rounded-md">
-                                    <div className="flex items-start justify-between">
-                                        <div className="flex-1">
-                                            <p className="font-medium">{followUp.subject}</p>
-                                            <p className="text-sm text-muted-foreground">{followUp.clients?.name}</p>
-                                            <div className="mt-2">
-                                                <span className={`px-2 py-1 rounded-full text-xs ${followUp.type === 'call'
-                                                    ? 'bg-blue-100 text-blue-800'
-                                                    : followUp.type === 'email'
-                                                        ? 'bg-green-100 text-green-800'
-                                                        : followUp.type === 'meeting'
-                                                            ? 'bg-purple-100 text-purple-800'
-                                                            : 'bg-gray-100 text-gray-800'
-                                                    }`}>
-                                                    {followUp.type}
-                                                </span>
-                                            </div>
-                                        </div>
-                                        <div className="text-right">
-                                            <p className="text-xs text-muted-foreground">
-                                                {formatDate(followUp.scheduled_date)}
-                                            </p>
-                                            <div className="flex items-center text-blue-600 text-xs mt-1">
-                                                <Clock className="h-3 w-3 mr-1" />
-                                                Scheduled
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            ))
-                        ) : (
-                            <p className="text-muted-foreground text-center py-4">No upcoming follow-ups</p>
-                        )}
-                    </div>
-                </div> */}
             </div>
 
             {/* Quick Actions */}

@@ -1,5 +1,5 @@
 import supabase from './supabaseClient';
-import { Client, Task, FollowUp, DashboardStats } from './types';
+import { Client, Task, DashboardStats } from './types';
 
 export class DashboardService {
     // Utility function to convert DD/MM/YYYY to YYYY-MM-DD
@@ -36,7 +36,6 @@ export class DashboardService {
                     activeClients: 0,
                     pendingTasks: 0,
                     overdueTasks: 0,
-                    upcomingFollowUps: 0,
                     completedTasksThisWeek: 0
                 };
             }
@@ -84,15 +83,11 @@ export class DashboardService {
                 new Date(t.updated_at) >= weekAgo // ✅ When task was completed, not created
             ).length || 0;
 
-            // Follow-ups will be 0 for now since table doesn't exist yet
-            const upcomingFollowUps = 0;
-
             return {
                 totalClients,
                 activeClients,
                 pendingTasks: dueTasks, // Now represents due tasks instead of just pending
                 overdueTasks,
-                upcomingFollowUps,
                 completedTasksThisWeek
             };
         } catch (error) {
@@ -102,14 +97,13 @@ export class DashboardService {
                 activeClients: 0,
                 pendingTasks: 0,
                 overdueTasks: 0,
-                upcomingFollowUps: 0,
                 completedTasksThisWeek: 0
             };
         }
     }
 
     // Get recent clients
-    static async getRecentClients(limit: number = 5, userId?: string): Promise<Client[]> {
+    static async getRecentClients(limit: number = 3, userId?: string): Promise<Client[]> {
         try {
             if (!userId) return [];
 
@@ -153,17 +147,6 @@ export class DashboardService {
             return data || [];
         } catch (error) {
             console.error('Error fetching due tasks:', error);
-            return [];
-        }
-    }
-
-    // Get recent follow-ups (returning empty array since table doesn't exist yet)
-    static async getRecentFollowUps(limit: number = 5, userId?: string): Promise<FollowUp[]> {
-        try {
-            // Return empty array since follow_ups table doesn't exist yet
-            return [];
-        } catch (error) {
-            console.error('Error fetching recent follow-ups:', error);
             return [];
         }
     }
@@ -551,7 +534,7 @@ export class DashboardService {
     }
 
     // Get pending tasks (status = 'pending' only)
-    static async getPendingTasks(limit: number = 10, userId?: string): Promise<Task[]> {
+    static async getPendingTasks(limit: number = 3, userId?: string): Promise<Task[]> {
         try {
             if (!userId) return [];
 
@@ -744,27 +727,6 @@ export class DashboardService {
     }
 
     // Delete user account (be very careful with this)
-    static async deleteUserAccount(userId: string): Promise<boolean> {
-        try {
-            // Delete all user data in order (due to foreign key constraints)
-            await Promise.all([
-                supabase.from('tasks').delete().eq('user_id', userId),
-                supabase.from('clients').delete().eq('user_id', userId),
-                supabase.from('user_preferences').delete().eq('user_id', userId),
-                supabase.from('profiles').delete().eq('id', userId)
-            ]);
-
-            // Finally delete the auth user
-            const { error } = await supabase.auth.admin.deleteUser(userId);
-            if (error) throw error;
-
-            return true;
-        } catch (error) {
-            console.error('Error deleting user account:', error);
-            return false;
-        }
-    }
-
     // Auto-cleanup inactive clients and their related tasks after 30 days
     static async cleanupInactiveClients(userId: string): Promise<void> {
         try {

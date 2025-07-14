@@ -54,11 +54,8 @@ export default function TasksTab() {
                 return <Badge variant="default" className="bg-green-100 text-green-800 hover:bg-green-100">Completed</Badge>
             case 'in_progress':
                 return <Badge variant="default" className="bg-blue-100 text-blue-800 hover:bg-blue-100">In Progress</Badge>
-            case 'todo':
             case 'pending':
                 return <Badge variant="default" className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">Pending</Badge>
-            case 'overdue':
-                return <Badge variant="destructive">Overdue</Badge>
             default:
                 return <Badge variant="secondary">{status}</Badge>
         }

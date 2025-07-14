@@ -41,7 +41,7 @@ export default function AddClientDialog({ onClientAdded, trigger, className, edi
                 company: editClient.company || '',
                 phone: editClient.phone || '',
                 notes: editClient.notes || '',
-                status: editClient.status || 'active'
+                status: editClient.status as 'active' | 'inactive'
             })
         } else {
             // Reset form for new client

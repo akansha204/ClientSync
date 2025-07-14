@@ -40,7 +40,6 @@ export default function SettingsTab() {
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
     const [showPassword, setShowPassword] = useState(false)
-    const [isDeleteAccountOpen, setIsDeleteAccountOpen] = useState(false)
     const [isClearTasksOpen, setIsClearTasksOpen] = useState(false)
     const [isCleanupClientsOpen, setIsCleanupClientsOpen] = useState(false)
     const [avatarUploading, setAvatarUploading] = useState(false)
@@ -206,24 +205,6 @@ export default function SettingsTab() {
         } finally {
             setSaving(false)
         }
-    }
-
-    const handleDeleteAccount = async () => {
-        if (!session?.user?.id) return
-
-        try {
-            const success = await DashboardService.deleteUserAccount(session.user.id)
-            if (success) {
-                toast.success('Account deleted successfully. You will be redirected to the login page.')
-                // The user will be redirected by the auth state change
-            } else {
-                toast.error('Error deleting account. Please try again.')
-            }
-        } catch (error) {
-            console.error('Error deleting account:', error)
-            toast.error('Error deleting account. Please try again.')
-        }
-        setIsDeleteAccountOpen(false)
     }
 
     const handleClearCompletedTasks = async () => {
@@ -453,78 +434,6 @@ export default function SettingsTab() {
                         </CardContent>
                     </Card>
 
-                    <Card className="border-red-200">
-                        <CardHeader>
-                            <CardTitle className="text-red-600 flex items-center gap-2">
-                                <Shield className="w-5 h-5" />
-                                Danger Zone
-                            </CardTitle>
-                            <CardDescription>
-                                Irreversible and destructive actions.
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                                <div className="flex items-start justify-between">
-                                    <div className="flex-1">
-                                        <h4 className="font-medium text-red-800 mb-1">Delete Account</h4>
-                                        <p className="text-sm text-red-600 mb-3">
-                                            Permanently delete your account and all associated data including clients, tasks, and settings.
-                                            This action cannot be undone.
-                                        </p>
-                                        <Dialog open={isDeleteAccountOpen} onOpenChange={setIsDeleteAccountOpen}>
-                                            <DialogTrigger asChild>
-                                                <Button variant="destructive" size="sm">
-                                                    Delete Account
-                                                </Button>
-                                            </DialogTrigger>
-                                            <DialogContent className="sm:max-w-md">
-                                                <DialogHeader>
-                                                    <DialogTitle className="text-red-600">Delete Account</DialogTitle>
-                                                    <DialogDescription className="text-gray-600">
-                                                        Are you absolutely sure you want to delete your account? This will:
-                                                    </DialogDescription>
-                                                </DialogHeader>
-                                                <div className="py-4">
-                                                    <ul className="space-y-2 text-sm text-gray-600">
-                                                        <li className="flex items-center gap-2">
-                                                            <div className="w-1 h-1 bg-red-500 rounded-full"></div>
-                                                            Permanently delete all your clients
-                                                        </li>
-                                                        <li className="flex items-center gap-2">
-                                                            <div className="w-1 h-1 bg-red-500 rounded-full"></div>
-                                                            Remove all tasks and follow-ups
-                                                        </li>
-                                                        <li className="flex items-center gap-2">
-                                                            <div className="w-1 h-1 bg-red-500 rounded-full"></div>
-                                                            Erase your profile and settings
-                                                        </li>
-                                                        <li className="flex items-center gap-2">
-                                                            <div className="w-1 h-1 bg-red-500 rounded-full"></div>
-                                                            Cancel your account permanently
-                                                        </li>
-                                                    </ul>
-                                                    <div className="mt-4 p-3 bg-red-50 rounded-md border border-red-200">
-                                                        <p className="text-sm font-medium text-red-800">
-                                                            This action cannot be undone!
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                                <div className="flex justify-end gap-2">
-                                                    <Button variant="outline" onClick={() => setIsDeleteAccountOpen(false)}>
-                                                        Cancel
-                                                    </Button>
-                                                    <Button variant="destructive" onClick={handleDeleteAccount}>
-                                                        Yes, Delete My Account
-                                                    </Button>
-                                                </div>
-                                            </DialogContent>
-                                        </Dialog>
-                                    </div>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
                 </TabsContent>
 
                 <TabsContent value="data" className="space-y-6">
