@@ -242,7 +242,7 @@ export class DashboardService {
                         company: clientData.company || null,
                         phone: clientData.phone || null,
                         notes: clientData.notes || null,
-                        status: clientData.status || 'active', // Default to active
+                        status: clientData.status, // Default to active
                         user_id: clientData.userId,
                         created_at: new Date().toISOString(),
                         updated_at: new Date().toISOString()

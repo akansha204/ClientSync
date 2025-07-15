@@ -322,7 +322,11 @@ export default function ClientsTab() {
                                             {formatDate(client.created_at)}
                                         </TableCell>
                                         <TableCell>
-                                            <Badge variant="secondary">Active</Badge>
+                                            {client.status === 'active' ? (
+                                                <Badge variant="secondary">Active</Badge>
+                                            ) : (
+                                                <Badge variant="outline">Inactive</Badge>
+                                            )}
                                         </TableCell>
                                         <TableCell>
                                             <DropdownMenu>
@@ -426,6 +430,8 @@ export default function ClientsTab() {
                         Edit Client
                     </Button>
                 }
+                onClose={() => setClientToEdit(null)}
+
             />
 
             <AddTaskDialog

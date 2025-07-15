@@ -17,9 +17,10 @@ interface AddClientDialogProps {
     trigger?: React.ReactNode
     className?: string
     editClient?: Client | null
+    onClose?: () => void
 }
 
-export default function AddClientDialog({ onClientAdded, trigger, className, editClient }: AddClientDialogProps) {
+export default function AddClientDialog({ onClientAdded, trigger, className, editClient, onClose }: AddClientDialogProps) {
     const session = useSupabaseSession()
     const [isOpen, setIsOpen] = useState(false)
     const [loading, setLoading] = useState(false)
@@ -121,6 +122,13 @@ export default function AddClientDialog({ onClientAdded, trigger, className, edi
         }
     }
 
+    const handleDialogOpenChange = (open: boolean) => {
+        setIsOpen(open)
+        if (!open && onClose) {
+            onClose()
+        }
+    }
+
     const defaultTrigger = (
         <Button className={`h-auto p-4 flex-col gap-2 ${className}`} variant="outline">
             <Users className="h-6 w-6" />
@@ -129,7 +137,7 @@ export default function AddClientDialog({ onClientAdded, trigger, className, edi
     )
 
     return (
-        <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <Dialog open={isOpen} onOpenChange={handleDialogOpenChange}>
             <DialogTrigger asChild>
                 {trigger || defaultTrigger}
             </DialogTrigger>
