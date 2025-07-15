@@ -103,16 +103,22 @@ export class DashboardService {
     }
 
     // Get recent clients
-    static async getRecentClients(limit: number = 3, userId?: string): Promise<Client[]> {
+    static async getRecentClients(limit: number = 3, userId?: string, status?: string): Promise<Client[]> {
         try {
             if (!userId) return [];
 
-            const { data, error } = await supabase
+            let query = supabase
                 .from('clients')
                 .select('*')
                 .eq('user_id', userId)
                 .order('created_at', { ascending: false })
                 .limit(limit);
+
+            if (status) {
+                query = query.eq('status', status);
+            }
+
+            const { data, error } = await query;
 
             if (error) throw error;
             return data || [];
@@ -121,6 +127,7 @@ export class DashboardService {
             return [];
         }
     }
+
 
     // Get due tasks
     static async getDueTasks(limit: number = 10, userId?: string): Promise<Task[]> {

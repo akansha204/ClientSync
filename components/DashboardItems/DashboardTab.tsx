@@ -24,7 +24,7 @@ export default function DashboardTab() {
 
             const [statsData, clientsData, tasksData] = await Promise.all([
                 DashboardService.getDashboardStats(userId),
-                DashboardService.getRecentClients(3, userId),
+                DashboardService.getRecentClients(3, userId, 'active'),
                 DashboardService.getDueTasks(8, userId),
             ])
 
@@ -143,7 +143,7 @@ export default function DashboardTab() {
                 {/* Recent Clients */}
                 <div className="bg-card text-card-foreground rounded-lg border p-6 shadow-sm">
                     <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-lg font-semibold">Recent Clients</h3>
+                        <h3 className="text-lg font-semibold">Recent Active Clients</h3>
                         <Users className="h-5 w-5 text-muted-foreground" />
                     </div>
                     <div className="space-y-3">
