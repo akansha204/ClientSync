@@ -615,6 +615,26 @@ export class DashboardService {
     }
 
     // Update user profile
+    // static async updateUserProfile(userId: string, profileData: any): Promise<any> {
+    //     try {
+    //         const { data, error } = await supabase
+    //             .from('profiles')
+    //             .upsert({
+    //                 id: userId,
+    //                 ...profileData,
+    //                 updated_at: new Date().toISOString()
+    //             })
+    //             .select()
+    //             .single();
+
+    //         if (error) throw error;
+    //         return data;
+    //     } catch (error) {
+    //         console.error('Error updating user profile:', error);
+    //         return null;
+    //     }
+    // }
+    // In dashboardService.ts
     static async updateUserProfile(userId: string, profileData: any): Promise<any> {
         try {
             const { data, error } = await supabase
@@ -623,6 +643,8 @@ export class DashboardService {
                     id: userId,
                     ...profileData,
                     updated_at: new Date().toISOString()
+                }, {
+                    onConflict: 'id' // <-- Add this line
                 })
                 .select()
                 .single();
@@ -640,7 +662,7 @@ export class DashboardService {
         try {
             const fileExt = file.name.split('.').pop()
             const fileName = `${userId}-${Date.now()}.${fileExt}`
-            const filePath = `avatars/${fileName}`
+            const filePath = `${userId}/${fileName}`
 
             // Upload file to Supabase Storage
             const { error: uploadError } = await supabase.storage
@@ -662,15 +684,31 @@ export class DashboardService {
     }
 
     // Update user password
-    static async updatePassword(userId: string, newPassword: string): Promise<boolean> {
+    // static async updatePassword(userId: string, newPassword: string): Promise<boolean> {
+    //     try {
+    //         // Get current user to ensure they're updating their own password
+    //         const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+    //         if (userError || !user || user.id !== userId) {
+    //             throw new Error('Unauthorized password update attempt');
+    //         }
+
+    //         const { error } = await supabase.auth.updateUser({
+    //             password: newPassword
+    //         });
+
+    //         if (error) throw error;
+    //         return true;
+    //     } catch (error) {
+    //         console.error('Error updating password:', error);
+    //         return false;
+    //     }
+    // }
+    // A more streamlined version
+    static async updatePassword(newPassword: string): Promise<boolean> {
         try {
-            // Get current user to ensure they're updating their own password
-            const { data: { user }, error: userError } = await supabase.auth.getUser();
-
-            if (userError || !user || user.id !== userId) {
-                throw new Error('Unauthorized password update attempt');
-            }
-
+            // This method automatically targets the currently authenticated user.
+            // No need to pass or check the userId.
             const { error } = await supabase.auth.updateUser({
                 password: newPassword
             });

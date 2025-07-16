@@ -132,15 +132,18 @@ export default function SettingsTab() {
 
         setAvatarUploading(true)
         try {
-            const avatarUrl = await DashboardService.uploadAvatar(session.user.id, file)
+            const avatarUrl = await DashboardService.uploadAvatar(session.user.id, file);
             if (avatarUrl) {
-                setProfile({ ...profile, avatar_url: avatarUrl })
-                // Also update the profile in the database
+                // Update the local state to immediately show the new avatar
+                setProfile(prevProfile => ({ ...prevProfile, avatar_url: avatarUrl }));
+
+                // Update only the avatar_url in the database
                 await DashboardService.updateUserProfile(session.user.id, {
-                    ...profile,
                     avatar_url: avatarUrl
-                })
-                toast.success('Avatar uploaded successfully!')
+                });
+
+                toast.success('Avatar uploaded successfully!');
+
             } else {
                 toast.error('Failed to upload avatar. Please try again.')
             }
@@ -153,11 +156,11 @@ export default function SettingsTab() {
     }
 
     const handleProfileUpdate = async () => {
-        if (!session?.user?.id) return
-
+        if (!session?.user?.id || !session?.user?.email) return
         setSaving(true)
         try {
             await DashboardService.updateUserProfile(session.user.id, {
+                email: session.user.email,
                 full_name: profile.full_name,
                 company: profile.company,
                 phone: profile.phone,
@@ -188,7 +191,7 @@ export default function SettingsTab() {
 
         setSaving(true)
         try {
-            const success = await DashboardService.updatePassword(session.user.id, passwords.newPassword)
+            const success = await DashboardService.updatePassword(passwords.newPassword)
             if (success) {
                 setPasswords({
                     currentPassword: '',
