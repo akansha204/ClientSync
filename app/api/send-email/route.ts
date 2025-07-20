@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
         const senderName = user.user_metadata?.full_name || user.email; // Use full_name, fallback to email
 
         // Send email
-        const fromEmail = `"${senderName} via Client-Sync" <${process.env.FROM_EMAIL}>`;
+        const fromEmail = `"Client-Sync" <${process.env.FROM_EMAIL}>`;
 
         const replyToAddress = `"${senderName}" <${user.email}>`;
 
