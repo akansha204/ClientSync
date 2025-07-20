@@ -67,23 +67,28 @@ export async function POST(req: NextRequest) {
         // Initialize Resend
         const resend = new Resend(process.env.RESEND_API_KEY);
 
+        const senderName = user.user_metadata?.full_name || user.email; // Use full_name, fallback to email
+
         // Send email
-        const fromEmail = process.env.FROM_EMAIL || 'onboarding@resend.dev'; // Use Resend's test domain as fallback
+        const fromEmail = `"${senderName} via Client-Sync" <${process.env.FROM_EMAIL}>`;
 
-        // In development/testing mode, check if we can send to the recipient
-        const isDevelopment = process.env.NODE_ENV === 'development';
-        const isTestingMode = fromEmail === 'onboarding@resend.dev';
-        const userEmail = user.email;
+        const replyToAddress = `"${senderName}" <${user.email}>`;
 
-        if (isDevelopment && isTestingMode && to !== userEmail) {
-            return NextResponse.json(
-                {
-                    error: `Testing mode: Can only send emails to your own email address (${userEmail}). To send to other recipients, please verify a domain at resend.com/domains.`,
-                    suggestion: "For testing, try sending the email to your own email address instead."
-                },
-                { status: 403 }
-            );
-        }
+
+        // // In development/testing mode, check if we can send to the recipient
+        // const isDevelopment = process.env.NODE_ENV === 'development';
+        // const isTestingMode = fromEmail === 'onboarding@resend.dev';
+        // const userEmail = user.email;
+
+        // if (isDevelopment && isTestingMode && to !== userEmail) {
+        //     return NextResponse.json(
+        //         {
+        //             error: `Testing mode: Can only send emails to your own email address (${userEmail}). To send to other recipients, please verify a domain at resend.com/domains.`,
+        //             suggestion: "For testing, try sending the email to your own email address instead."
+        //         },
+        //         { status: 403 }
+        //     );
+        // }
 
         const { data, error } = await resend.emails.send({
             from: fromEmail,
@@ -91,7 +96,7 @@ export async function POST(req: NextRequest) {
             subject: subject,
             html: formatEmailContent(content, senderEmail),
             text: content, // Plain text version
-            replyTo: senderEmail, // Set user's email as reply-to
+            replyTo: replyToAddress, // Set user's email as reply-to
         });
 
         if (error) {

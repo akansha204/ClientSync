@@ -118,16 +118,13 @@ export default function LoginBtn({ onSignupClick, isOpen, onOpenChange }: LoginB
         <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm(); }}>
             <DialogTrigger
                 onClick={() => setDialogOpen(true)}
-                className="bg-white hover:bg-gray-50 hover:cursor-pointer text-gray-700 px-3 py-2 rounded-lg font-normal text-md transition-all duration-200  hover:border-gray-400 sm:text-base sm:px-4 sm:py-2"
+                className=" hover:cursor-pointer text-gray-500 px-3 py-2 rounded-lg font-medium text-md transition-all duration-200  hover:border-gray-400 sm:text-base sm:px-4 sm:py-2"
             >
                 Log in
             </DialogTrigger>
             <DialogContent className="sm:max-w-md bg-white text-black border-gray-200">
                 <DialogHeader>
                     <div className="flex items-center gap-2 justify-center mb-2">
-                        <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
-                            <span className="text-white font-semibold text-sm">C</span>
-                        </div>
                         <span className="text-lg font-semibold text-black">ClientSync</span>
                     </div>
                     <DialogTitle className="text-2xl font-bold text-center text-black">

@@ -224,14 +224,6 @@ export default function GenerateEmailDialog({
                                     <div><strong>Company:</strong> {clientCompany}</div>
                                     <div><strong>From:</strong> {session?.user?.email || 'Your account'}</div>
                                 </div>
-                                {/* Show warning if client email is different from user email */}
-                                {session?.user?.email && clientEmail !== session.user.email && (
-                                    <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-                                        <div className="text-sm text-yellow-800">
-                                            <strong>⚠️ Testing Mode:</strong> You can only send emails to your own address ({session.user.email}) unless you verify a domain at resend.com/domains.
-                                        </div>
-                                    </div>
-                                )}
                             </CardContent>
                         </Card>
 
