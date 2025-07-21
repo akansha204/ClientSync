@@ -62,6 +62,10 @@ export default function SignupBtn({ isOpen, onOpenChange, onLoginClick }: Signup
             const { data, error } = await supabase.auth.signUp({
                 email: formData.email,
                 password: formData.password,
+                options: {
+                    // Add this line
+                    emailRedirectTo: `${window.location.origin}/auth/callback`
+                }
             });
 
             if (error) {
