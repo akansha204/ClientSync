@@ -114,67 +114,67 @@ export default function SettingsTab() {
         }
     }
 
-    const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0]
-        if (!file || !session?.user?.id) return
+    // const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    //     const file = event.target.files?.[0]
+    //     if (!file || !session?.user?.id) return
 
-        // Check file type
-        if (!file.type.startsWith('image/')) {
-            toast.error('Please select an image file')
-            return
-        }
+    //     // Check file type
+    //     if (!file.type.startsWith('image/')) {
+    //         toast.error('Please select an image file')
+    //         return
+    //     }
 
-        // Check file size (max 5MB)
-        if (file.size > 5 * 1024 * 1024) {
-            toast.error('File size must be less than 5MB')
-            return
-        }
+    //     // Check file size (max 5MB)
+    //     if (file.size > 5 * 1024 * 1024) {
+    //         toast.error('File size must be less than 5MB')
+    //         return
+    //     }
 
-        setAvatarUploading(true)
-        try {
-            const avatarUrl = await DashboardService.uploadAvatar(session.user.id, file);
-            if (avatarUrl) {
-                // Update the local state to immediately show the new avatar
-                setProfile(prevProfile => ({ ...prevProfile, avatar_url: avatarUrl }));
+    //     setAvatarUploading(true)
+    //     try {
+    //         const avatarUrl = await DashboardService.uploadAvatar(session.user.id, file);
+    //         if (avatarUrl) {
+    //             // Update the local state to immediately show the new avatar
+    //             setProfile(prevProfile => ({ ...prevProfile, avatar_url: avatarUrl }));
 
-                // Update only the avatar_url in the database
-                await DashboardService.updateUserProfile(session.user.id, {
-                    avatar_url: avatarUrl
-                });
+    //             // Update only the avatar_url in the database
+    //             await DashboardService.updateUserProfile(session.user.id, {
+    //                 avatar_url: avatarUrl
+    //             });
 
-                toast.success('Avatar uploaded successfully!');
+    //             toast.success('Avatar uploaded successfully!');
 
-            } else {
-                toast.error('Failed to upload avatar. Please try again.')
-            }
-        } catch (error) {
-            console.error('Error uploading avatar:', error)
-            toast.error('Error uploading avatar. Please try again.')
-        } finally {
-            setAvatarUploading(false)
-        }
-    }
+    //         } else {
+    //             toast.error('Failed to upload avatar. Please try again.')
+    //         }
+    //     } catch (error) {
+    //         console.error('Error uploading avatar:', error)
+    //         toast.error('Error uploading avatar. Please try again.')
+    //     } finally {
+    //         setAvatarUploading(false)
+    //     }
+    // }
 
-    const handleProfileUpdate = async () => {
-        if (!session?.user?.id || !session?.user?.email) return
-        setSaving(true)
-        try {
-            await DashboardService.updateUserProfile(session.user.id, {
-                email: session.user.email,
-                full_name: profile.full_name,
-                company: profile.company,
-                phone: profile.phone,
-                bio: profile.bio,
-                avatar_url: profile.avatar_url
-            })
-            toast.success('Profile updated successfully!')
-        } catch (error) {
-            console.error('Error updating profile:', error)
-            toast.error('Error updating profile. Please try again.')
-        } finally {
-            setSaving(false)
-        }
-    }
+    // const handleProfileUpdate = async () => {
+    //     if (!session?.user?.id || !session?.user?.email) return
+    //     setSaving(true)
+    //     try {
+    //         await DashboardService.updateUserProfile(session.user.id, {
+    //             email: session.user.email,
+    //             full_name: profile.full_name,
+    //             company: profile.company,
+    //             phone: profile.phone,
+    //             bio: profile.bio,
+    //             avatar_url: profile.avatar_url
+    //         })
+    //         toast.success('Profile updated successfully!')
+    //     } catch (error) {
+    //         console.error('Error updating profile:', error)
+    //         toast.error('Error updating profile. Please try again.')
+    //     } finally {
+    //         setSaving(false)
+    //     }
+    // }
 
     const handlePasswordUpdate = async () => {
         if (!session?.user?.id) return
@@ -259,13 +259,14 @@ export default function SettingsTab() {
                 </p>
             </div>
 
-            <Tabs defaultValue="account" className="w-full">
-                <TabsList className="grid w-full grid-cols-3">
-                    <TabsTrigger value="account">Account</TabsTrigger>
+            <Tabs defaultValue="security" className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                    {/* <TabsTrigger value="account">Account</TabsTrigger> */}
                     <TabsTrigger value="security">Security</TabsTrigger>
                     <TabsTrigger value="data">Data</TabsTrigger>
                 </TabsList>
 
+                {/* Account Tab Content (Commented out)
                 <TabsContent value="account" className="space-y-6">
                     <Card>
                         <CardHeader>
@@ -369,6 +370,7 @@ export default function SettingsTab() {
                         </CardContent>
                     </Card>
                 </TabsContent>
+                */}
 
                 <TabsContent value="security" className="space-y-6">
                     <Card>

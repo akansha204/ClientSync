@@ -261,7 +261,6 @@ export class DashboardService {
             if (error) throw error;
             return data;
         } catch (error) {
-            console.error('Error creating client:', error);
             throw error;
         }
     }
@@ -635,76 +634,55 @@ export class DashboardService {
     //     }
     // }
     // In dashboardService.ts
-    static async updateUserProfile(userId: string, profileData: any): Promise<any> {
-        try {
-            const { data, error } = await supabase
-                .from('profiles')
-                .upsert({
-                    id: userId,
-                    ...profileData,
-                    updated_at: new Date().toISOString()
-                }, {
-                    onConflict: 'id' // <-- Add this line
-                })
-                .select()
-                .single();
-
-            if (error) throw error;
-            return data;
-        } catch (error) {
-            console.error('Error updating user profile:', error);
-            return null;
-        }
-    }
-
-    // Upload avatar image
-    static async uploadAvatar(userId: string, file: File): Promise<string | null> {
-        try {
-            const fileExt = file.name.split('.').pop()
-            const fileName = `${userId}-${Date.now()}.${fileExt}`
-            const filePath = `${userId}/${fileName}`
-
-            // Upload file to Supabase Storage
-            const { error: uploadError } = await supabase.storage
-                .from('avatars')
-                .upload(filePath, file)
-
-            if (uploadError) throw uploadError
-
-            // Get public URL
-            const { data: { publicUrl } } = supabase.storage
-                .from('avatars')
-                .getPublicUrl(filePath)
-
-            return publicUrl
-        } catch (error) {
-            console.error('Error uploading avatar:', error)
-            return null
-        }
-    }
-
-    // Update user password
-    // static async updatePassword(userId: string, newPassword: string): Promise<boolean> {
+    // static async updateUserProfile(userId: string, profileData: any): Promise<any> {
     //     try {
-    //         // Get current user to ensure they're updating their own password
-    //         const { data: { user }, error: userError } = await supabase.auth.getUser();
-
-    //         if (userError || !user || user.id !== userId) {
-    //             throw new Error('Unauthorized password update attempt');
-    //         }
-
-    //         const { error } = await supabase.auth.updateUser({
-    //             password: newPassword
-    //         });
+    //         const { data, error } = await supabase
+    //             .from('profiles')
+    //             .upsert({
+    //                 id: userId,
+    //                 ...profileData,
+    //                 updated_at: new Date().toISOString()
+    //             }, {
+    //                 onConflict: 'id' // <-- Add this line
+    //             })
+    //             .select()
+    //             .single();
 
     //         if (error) throw error;
-    //         return true;
+    //         return data;
     //     } catch (error) {
-    //         console.error('Error updating password:', error);
-    //         return false;
+    //         console.error('Error updating user profile:', error);
+    //         return null;
     //     }
     // }
-    // A more streamlined version
+
+    // Upload avatar image
+    // static async uploadAvatar(userId: string, file: File): Promise<string | null> {
+    //     try {
+    //         const fileExt = file.name.split('.').pop()
+    //         const fileName = `${userId}-${Date.now()}.${fileExt}`
+    //         const filePath = `${userId}/${fileName}`
+
+    //         // Upload file to Supabase Storage
+    //         const { error: uploadError } = await supabase.storage
+    //             .from('avatars')
+    //             .upload(filePath, file)
+
+    //         if (uploadError) throw uploadError
+
+    //         // Get public URL
+    //         const { data: { publicUrl } } = supabase.storage
+    //             .from('avatars')
+    //             .getPublicUrl(filePath)
+
+    //         return publicUrl
+    //     } catch (error) {
+    //         console.error('Error uploading avatar:', error)
+    //         return null
+    //     }
+    // }
+
+    // Update user password
     static async updatePassword(newPassword: string): Promise<boolean> {
         try {
             // This method automatically targets the currently authenticated user.

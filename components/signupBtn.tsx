@@ -97,9 +97,7 @@ export default function SignupBtn({ isOpen, onOpenChange, onLoginClick }: Signup
             <DialogContent className="sm:max-w-md bg-white text-black border-gray-200">
                 <DialogHeader>
                     <div className="flex items-center gap-2 justify-center mb-2">
-                        <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
-                            <span className="text-white font-semibold text-sm">C</span>
-                        </div>
+
                         <span className="text-lg font-semibold text-black">ClientSync</span>
                     </div>
                     <DialogTitle className="text-2xl font-bold text-center text-black">
