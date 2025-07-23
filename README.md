@@ -1,36 +1,73 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ClientSync
 
+ClientSync is a modern web application built to help professionals manage their clients and tasks efficiently. Built with Next.js 13+ and Supabase, it offers a robust platform for client relationship management and task tracking.
+
+## Features
+
+- **Authentication**
+  - Secure user authentication powered by Supabase
+  - Password reset functionality
+  - Protected routes and dashboard
+
+- **Client Management**
+  - Add and manage client information
+  - Track client details including name, email, company, and status
+  - Comprehensive client overview
+- **Task Management**
+  - Create and assign tasks to specific clients
+  - Track task status (pending, in progress, completed)
+  - Due date management
+  - Task filtering and search capabilities
+
+- **Dashboard**
+  - User-friendly interface
+  - Quick overview of pending tasks
+  - Client statistics
+  - Task status visualization
+
+- **User Experience**
+  - Dark/Light theme support
+  - Responsive design
+  - Real-time updates
+  - Modern UI components using Shadcn/ui
+
+## Tech Stack
+
+- **Frontend**
+  - Next.js 13+
+  - TypeScript
+  - Tailwind CSS
+  - Shadcn/ui Components
+- **Backend**
+  - Supabase (Database & Authentication)
+  - Next.js API Routes
 ## Getting Started
 
-First, run the development server:
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/akansha204/ClientSync.git
+   cd ClientSync
+   ```
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+3. **Environment Setup**
+   Create a `.env.local` file in the root directory:
+   ```env
+   NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+   ```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+4. **Run the development server**
+   ```bash
+   npm run dev
+   ```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+5. **Build for production**
+   ```bash
+   npm run build
+   ```
+Built with ❤️ using Next.js and Supabase
